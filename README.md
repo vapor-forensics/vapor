@@ -39,7 +39,7 @@ Setup a virtualenv and install requirements
 (this example uses [virtualenvwrapper](https://virtualenvwrapper.readthedocs.io/en/latest/)):
 
 ```bash
-mkvirtualenv vapor_forensics -p python3.11
+mkvirtualenv vapor -p python3.11
 pip install -r dev-requirements.txt
 ```
 
@@ -47,10 +47,10 @@ pip install -r dev-requirements.txt
 
 *If you are using Docker you can skip these steps.*
 
-Create a database named `vapor_forensics`.
+Create a database named `vapor`.
 
 ```
-createdb vapor_forensics
+createdb vapor
 ```
 
 Create database migrations:
@@ -117,13 +117,13 @@ If you use Docker it will start automatically.
 You can run it using:
 
 ```bash
-celery -A vapor_forensics worker -l INFO --pool=solo
+celery -A vapor worker -l INFO --pool=solo
 ```
 
 Or with celery beat (for scheduled tasks):
 
 ```bash
-celery -A vapor_forensics worker -l INFO -B --pool=solo
+celery -A vapor worker -l INFO -B --pool=solo
 ```
 
 Note: Using the `solo` pool is recommended for development but not for production.

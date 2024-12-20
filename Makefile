@@ -37,7 +37,7 @@ shell: ## Get a Django shell
 	@docker compose run --rm web python manage.py shell
 
 dbshell: ## Get a Database shell
-	@docker compose exec db psql -U postgres vapor_forensics
+	@docker compose exec db psql -U postgres vapor
 
 test: ## Run Django tests
 	@docker compose run --rm web python manage.py test ${ARGS}
