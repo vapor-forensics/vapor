@@ -1,0 +1,26 @@
+.idea
+.vscode
+*.code-workspace
+*.pyc
+*~
+db.sqlite3
+.sass-cache/
+celerybeat-schedule
+vapor_forensics/localsettings.py
+vapor_forensics/local.py
+static_root/
+node_modules/
+openapitools.json
+media/
+docs/_build
+_dist/
+.env
+.env.production
+.DS_Store
+.direnv
+.envrc
+.kamal/secrets
+
+# uncomment these lines after setting up the front-end build pipeline in dev and production
+# static/css/
+# static/js/

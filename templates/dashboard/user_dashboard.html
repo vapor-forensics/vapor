@@ -1,0 +1,50 @@
+{% extends "web/app/app_base.html" %}
+{% load form_tags %}
+{% load i18n %}
+{% load static %}
+{% block app %}
+<section class="app-card">
+
+    <h1 class="pg-title">{% translate "Project Dashboard" %}</h1>
+    <form>
+      <div class="pg-columns">
+        <div class="pg-column">
+          {% render_field form.start %}
+        </div>
+        <div class="pg-column">
+          {% render_field form.end %}
+        </div>
+      </div>
+      <div class="pg-text-right mt-2">
+        <input type="submit" class="pg-button-primary" value="Update">
+      </div>
+    </form>
+    <div class="mt-2">
+      <div class="pg-subtitle">{% translate "User Signups (Daily)" %}
+        <canvas id="signup-chart" class="mt-2"></canvas>
+      </div>
+      <div class="mt-2">
+        <div class="pg-subtitle">{% translate "Registered Users (Total)" %}
+          <canvas id="user-chart" class="mt-2"></canvas>
+        </div>
+      </div>
+    </div>
+</section>
+{% endblock %}
+{% block page_js %}
+{{ signup_data|json_script:'signup-data' }}
+<script src="{% static 'js/app-bundle.js' %}" defer></script>
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const start = new Date("{{ start }}");
+    const end = new Date("{{ end }}");
+    const startValue = {{ start_value }};
+
+    const signupChartCtx = document.getElementById('signup-chart').getContext('2d');
+    const userChartCtx = document.getElementById('user-chart').getContext('2d');
+    const signupData = JSON.parse(document.getElementById('signup-data').textContent);
+    SiteJS.app.DashboardCharts.barChartWithDates(signupChartCtx, start, end, signupData, "User Signups");
+    SiteJS.app.DashboardCharts.cumulativeChartWithDates(userChartCtx, start, end, signupData, "Registered Users", startValue);
+  });
+</script>
+{% endblock %}

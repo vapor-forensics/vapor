@@ -1,0 +1,56 @@
+cli:
+  app_directory: apps
+  base_model: apps.utils.models.BaseModel
+  module_path: apps
+  template_directory: templates
+  use_teams: false
+default_context:
+  version: '2024.12'
+  ai_chat_mode: none
+  ai_image_mode: none
+  author_name: Rdavid
+  ci: github_actions
+  css_framework: tailwind
+  css_theme: default
+  database: postgres
+  deploy_platform: kamal
+  description: Open Source Cloud Forensics
+  docker_setup: default
+  domain_name: localhost:8000
+  email: vaporforensics@gmail.com
+  enable_github_login: y
+  enable_google_login: n
+  enable_twitter_login: n
+  front_end_framework: htmx
+  github_username: vapor-forensics
+  include_static_files: y
+  marketing_email_platform: none
+  post_process: n
+  project_name: Vapor Forensics
+  project_slug: vapor_forensics
+  python_package_manager: pip-tools
+  standalone_front_end: none
+  stripe_payment_mode: checkout
+  subscription_billing_model: default
+  subscription_pricing_ui: in_app
+  use_2fa: y
+  use_admin_docs: n
+  use_api_auth: n
+  use_api_keys: y
+  use_async_example: n
+  use_cloud_media_storage: y
+  use_dark_mode: y
+  use_debug_toolbar: n
+  use_docker: y
+  use_ecommerce_example: n
+  use_examples: n
+  use_flowbite: n
+  use_health_checks: n
+  use_impersonation: n
+  use_sentry: n
+  use_shadcn: n
+  use_subscriptions: n
+  use_teams: n
+  use_teams_example: n
+  use_translations: n
+  use_wagtail: n

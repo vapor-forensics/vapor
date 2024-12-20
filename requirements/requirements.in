@@ -1,0 +1,19 @@
+boto3
+Django
+django-allauth[socialaccount,mfa]
+django-htmx
+django-otp  # this is required for the allauth two-factor migration, but can be removed after that
+django-template-partials
+django-waffle
+django-environ
+djangorestframework
+djangorestframework-api-key
+drf-spectacular
+django-anymail[mailgun]  # email services
+django-storages
+celery-progress
+celery
+celery[redis]
+django-celery-beat
+psycopg2-binary
+whitenoise[brotli]

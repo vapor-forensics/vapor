@@ -1,0 +1,82 @@
+# syntax = docker/dockerfile:1.5
+# Multi-stage Docker buildfile
+# See https://docs.docker.com/build/building/multi-stage/
+
+# Stage 1: Build the python dependencies
+FROM python:3.11-slim-bookworm as build-python
+
+# Include any build time OS dependencies here.
+RUN --mount=target=/var/lib/apt/lists,type=cache,sharing=locked \
+    --mount=target=/var/cache/apt,type=cache,sharing=locked \
+    rm -f /etc/apt/apt.conf.d/docker-clean && \
+    apt-get update \
+    # dependencies for building Python packages
+    && apt-get install -y build-essential libpq-dev
+
+COPY ./requirements /requirements
+RUN --mount=type=cache,target=/root/.cache \
+    pip wheel --no-deps --wheel-dir /wheels \
+    -r /requirements/requirements.txt \
+    -r /requirements/prod-requirements.txt
+
+# Stage 2: Build the front end files
+FROM node:20-bookworm-slim AS build-node
+RUN nodejs -v && npm -v
+WORKDIR /code
+COPY *.json *.js .babelrc /code/
+COPY assets /code/assets/
+COPY api-client /code/api-client/
+
+RUN npm install
+
+# build needs everything because it needs to be able to do the tailwind class detection / purging stuff
+COPY . /code
+RUN npm run build
+
+# Stage 3: Build the final image
+# This copies the python dependencies from the first stage
+# and the front end files from the second stage.
+# Add any runtime OS dependencies here.
+FROM python:3.11-slim-bookworm
+ENV PYTHONUNBUFFERED=1
+ENV DEBUG=0
+
+RUN --mount=target=/var/lib/apt/lists,type=cache,sharing=locked \
+    --mount=target=/var/cache/apt,type=cache,sharing=locked \
+    rm -f /etc/apt/apt.conf.d/docker-clean && \
+    apt-get update \
+    && apt-get install -y \
+    curl \
+    # psycopg2 dependencies
+    libpq-dev \
+    # Translations dependencies
+    gettext \
+    # cleaning up unused files
+    && apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false
+
+RUN addgroup --system django \
+    && adduser --system --ingroup django django
+
+COPY --from=build-python /wheels /wheels
+COPY ./requirements /requirements
+RUN --mount=type=cache,target=/root/.cache \
+    pip install --no-index --find-links=/wheels \
+    -r /requirements/requirements.txt \
+    -r /requirements/prod-requirements.txt \
+    && rm -rf /wheels
+
+WORKDIR /code
+
+COPY --chown=django:django . /code
+COPY --from=build-node /code/static /code/static
+
+# why this has to be here:
+# https://stackoverflow.com/questions/59719175/where-to-run-collectstatic-when-deploying-django-app-to-heroku-using-docker
+RUN DEBUG=False python /code/manage.py collectstatic --noinput --settings=vapor_forensics.settings_production
+RUN chown django:django -R static_root
+
+USER django
+
+COPY --chown=django:django docker_startup.sh /start
+RUN chmod +x /start
+CMD /start
