@@ -27,7 +27,7 @@ default_context:
   marketing_email_platform: none
   post_process: n
   project_name: Vapor Forensics
-  project_slug: vapor_forensics
+  project_slug: vapor
   python_package_manager: pip-tools
   standalone_front_end: none
   stripe_payment_mode: checkout

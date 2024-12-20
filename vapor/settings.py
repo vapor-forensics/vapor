@@ -95,7 +95,7 @@ MIDDLEWARE = [
 ]
 
 
-ROOT_URLCONF = "vapor_forensics.urls"
+ROOT_URLCONF = "vapor.urls"
 
 
 # used to disable the cache in dev, but turn it on in production.
@@ -149,7 +149,7 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = "vapor_forensics.wsgi.application"
+WSGI_APPLICATION = "vapor.wsgi.application"
 
 FORM_RENDERER = "django.forms.renderers.TemplatesSetting"
 
@@ -162,7 +162,7 @@ else:
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.postgresql",
-            "NAME": env("DJANGO_DATABASE_NAME", default="vapor_forensics"),
+            "NAME": env("DJANGO_DATABASE_NAME", default="vapor"),
             "USER": env("DJANGO_DATABASE_USER", default="postgres"),
             "PASSWORD": env("DJANGO_DATABASE_PASSWORD", default="***"),
             "HOST": env("DJANGO_DATABASE_HOST", default="localhost"),
@@ -295,7 +295,7 @@ if USE_S3_MEDIA:
     # Using this will require configuration of the S3 bucket
     AWS_ACCESS_KEY_ID = env("AWS_ACCESS_KEY_ID", default="")
     AWS_SECRET_ACCESS_KEY = env("AWS_SECRET_ACCESS_KEY")
-    AWS_STORAGE_BUCKET_NAME = env("AWS_STORAGE_BUCKET_NAME", default="vapor_forensics-media")
+    AWS_STORAGE_BUCKET_NAME = env("AWS_STORAGE_BUCKET_NAME", default="vapor-media")
     AWS_S3_CUSTOM_DOMAIN = f"{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com"
     PUBLIC_MEDIA_LOCATION = "media"
     MEDIA_URL = f"https://{AWS_S3_CUSTOM_DOMAIN}/{PUBLIC_MEDIA_LOCATION}/"
@@ -434,9 +434,9 @@ LOGGING = {
             "handlers": ["console"],
             "level": env("DJANGO_LOG_LEVEL", default="INFO"),
         },
-        "vapor_forensics": {
+        "vapor": {
             "handlers": ["console"],
-            "level": env("VAPOR_FORENSICS_LOG_LEVEL", default="INFO"),
+            "level": env("vapor_LOG_LEVEL", default="INFO"),
         },
     },
 }
