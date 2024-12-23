@@ -74,6 +74,12 @@ PROJECT_APPS = [
     "apps.dashboard.apps.DashboardConfig",
     "apps.api.apps.APIConfig",
     "apps.web",
+    "apps.gcp",
+    "apps.analysis",
+    "apps.aws",
+    "apps.azure",
+    "apps.case",
+    "apps.data",
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + PROJECT_APPS
