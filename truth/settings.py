@@ -1,5 +1,5 @@
 """
-Django settings for Vapor Forensics project.
+Django settings for truth Forensics project.
 
 For more information on this file, see
 https://docs.djangoproject.com/en/stable/topics/settings/
@@ -101,7 +101,7 @@ MIDDLEWARE = [
 ]
 
 
-ROOT_URLCONF = "vapor.urls"
+ROOT_URLCONF = "truth.urls"
 
 
 # used to disable the cache in dev, but turn it on in production.
@@ -155,7 +155,7 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = "vapor.wsgi.application"
+WSGI_APPLICATION = "truth.wsgi.application"
 
 FORM_RENDERER = "django.forms.renderers.TemplatesSetting"
 
@@ -168,7 +168,7 @@ else:
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.postgresql",
-            "NAME": env("DJANGO_DATABASE_NAME", default="vapor"),
+            "NAME": env("DJANGO_DATABASE_NAME", default="truth"),
             "USER": env("DJANGO_DATABASE_USER", default="postgres"),
             "PASSWORD": env("DJANGO_DATABASE_PASSWORD", default="***"),
             "HOST": env("DJANGO_DATABASE_HOST", default="localhost"),
@@ -301,7 +301,7 @@ if USE_S3_MEDIA:
     # Using this will require configuration of the S3 bucket
     AWS_ACCESS_KEY_ID = env("AWS_ACCESS_KEY_ID", default="")
     AWS_SECRET_ACCESS_KEY = env("AWS_SECRET_ACCESS_KEY")
-    AWS_STORAGE_BUCKET_NAME = env("AWS_STORAGE_BUCKET_NAME", default="vapor-media")
+    AWS_STORAGE_BUCKET_NAME = env("AWS_STORAGE_BUCKET_NAME", default="truth-media")
     AWS_S3_CUSTOM_DOMAIN = f"{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com"
     PUBLIC_MEDIA_LOCATION = "media"
     MEDIA_URL = f"https://{AWS_S3_CUSTOM_DOMAIN}/{PUBLIC_MEDIA_LOCATION}/"
@@ -325,7 +325,7 @@ FORMS_URLFIELD_ASSUME_HTTPS = True
 
 # default email used by your server
 SERVER_EMAIL = env("SERVER_EMAIL", default="noreply@localhost:8000")
-DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default="vaporforensics@gmail.com")
+DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default="truthforensics@gmail.com")
 
 # The default value will print emails to the console, but you can change that here
 # and in your environment.
@@ -341,7 +341,7 @@ EMAIL_BACKEND = env("EMAIL_BACKEND", default="django.core.mail.backends.console.
 # see https://github.com/anymail/django-anymail for more details/examples
 # EMAIL_BACKEND = "anymail.backends.mailgun.EmailBackend"
 
-EMAIL_SUBJECT_PREFIX = "[Vapor Forensics] "
+EMAIL_SUBJECT_PREFIX = "[truth Forensics] "
 
 # Django sites
 
@@ -361,7 +361,7 @@ REST_FRAMEWORK = {
 
 
 SPECTACULAR_SETTINGS = {
-    "TITLE": "Vapor Forensics",
+    "TITLE": "truth Forensics",
     "DESCRIPTION": "The most amazing SaaS application the world has ever seen",
     "VERSION": "0.1.0",
     "SERVE_INCLUDE_SCHEMA": False,
@@ -400,18 +400,18 @@ CELERY_BEAT_SCHEDULER = "django_celery_beat.schedulers:DatabaseScheduler"
 
 # replace any values below with specifics for your project
 PROJECT_METADATA = {
-    "NAME": gettext_lazy("Vapor Forensics"),
+    "NAME": gettext_lazy("truth Forensics"),
     "URL": "http://localhost:8000",
     "DESCRIPTION": gettext_lazy("The most amazing SaaS application the world has ever seen"),
     "IMAGE": " ",
     "KEYWORDS": "SaaS, django",
-    "CONTACT_EMAIL": "vaporforensics@gmail.com",
+    "CONTACT_EMAIL": "truthforensics@gmail.com",
 }
 
 # set this to True in production to have URLs generated with https instead of http
 USE_HTTPS_IN_ABSOLUTE_URLS = env.bool("USE_HTTPS_IN_ABSOLUTE_URLS", default=False)
 
-ADMINS = [("Rdavid", "vaporforensics@gmail.com")]
+ADMINS = [("Rdavid", "truthforensics@gmail.com")]
 
 # Add your google analytics ID to the environment to connect to Google Analytics
 GOOGLE_ANALYTICS_ID = env("GOOGLE_ANALYTICS_ID", default="")
@@ -440,9 +440,9 @@ LOGGING = {
             "handlers": ["console"],
             "level": env("DJANGO_LOG_LEVEL", default="INFO"),
         },
-        "vapor": {
+        "truth": {
             "handlers": ["console"],
-            "level": env("vapor_LOG_LEVEL", default="INFO"),
+            "level": env("truth_LOG_LEVEL", default="INFO"),
         },
     },
 }

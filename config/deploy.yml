@@ -1,12 +1,12 @@
-service: vapor
+service: truth
 
-image: <namespace>/vapor
+image: <namespace>/truth
 
 env:
   # This is the minimal set of environment variables needed to run the app
   # in production. You can add more here and in the .kamal/secrets file as needed.
   clear:
-    DJANGO_SETTINGS_MODULE: vapor.settings_production
+    DJANGO_SETTINGS_MODULE: truth.settings_production
     ALLOWED_HOSTS: "localhost:8000"
     USE_S3_MEDIA: 'True'
     AWS_STORAGE_BUCKET_NAME: 'YOUR_APP-media'
@@ -30,11 +30,11 @@ servers:
   celery:
     hosts:
       - <IP-ADDRESS>
-    cmd: celery -A vapor worker -l INFO --concurrency 2
+    cmd: celery -A truth worker -l INFO --concurrency 2
   celerybeat:
     hosts:
       - <IP-ADDRESS>
-    cmd: celery -A vapor beat -l INFO
+    cmd: celery -A truth beat -l INFO
 
 # To use a non-root user see https://kamal-deploy.org/docs/configuration/ssh/#the-ssh-user
 # ssh:
@@ -52,7 +52,7 @@ registry:
     - KAMAL_REGISTRY_PASSWORD
 
 accessories:
-  # docker hostname will be 'vapor-postgres'
+  # docker hostname will be 'truth-postgres'
   postgres:
     image: postgres
     host: <IP-ADDRESS>
@@ -60,11 +60,11 @@ accessories:
       - data:/var/lib/postgresql/data
     env:
       clear:
-        POSTGRES_USER: vapor
-        POSTGRES_DB: vapor
+        POSTGRES_USER: truth
+        POSTGRES_DB: truth
       secret:
         - POSTGRES_PASSWORD
-  ## docker hostname will be 'vapor-redis'
+  ## docker hostname will be 'truth-redis'
   redis:
     image: redis
     host: <IP-ADDRESS>

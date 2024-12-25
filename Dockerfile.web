@@ -72,7 +72,7 @@ COPY --from=build-node /code/static /code/static
 
 # why this has to be here:
 # https://stackoverflow.com/questions/59719175/where-to-run-collectstatic-when-deploying-django-app-to-heroku-using-docker
-RUN DEBUG=False python /code/manage.py collectstatic --noinput --settings=vapor.settings_production
+RUN DEBUG=False python /code/manage.py collectstatic --noinput --settings=truth.settings_production
 RUN chown django:django -R static_root
 
 USER django

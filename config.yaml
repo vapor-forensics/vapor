@@ -17,17 +17,17 @@ default_context:
   description: Open Source Cloud Forensics
   docker_setup: default
   domain_name: localhost:8000
-  email: vaporforensics@gmail.com
+  email: truthforensics@gmail.com
   enable_github_login: y
   enable_google_login: n
   enable_twitter_login: n
   front_end_framework: htmx
-  github_username: vapor-forensics
+  github_username: truth-forensics
   include_static_files: y
   marketing_email_platform: none
   post_process: n
-  project_name: Vapor Forensics
-  project_slug: vapor
+  project_name: truth Forensics
+  project_slug: truth
   python_package_manager: pip-tools
   standalone_front_end: none
   stripe_payment_mode: checkout

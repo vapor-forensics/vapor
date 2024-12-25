@@ -6,11 +6,11 @@
 */
 @import "tailwindcss/components";
 @import "./app/tailwind/app-components.css";
-@import "./vapor/tailwind.css";
+@import "./truth/tailwind.css";
 
 @import "tailwindcss/utilities";
 
-/* set vapor css variables to DaisyUI default colors: https://daisyui.com/docs/colors/ */
+/* set truth css variables to DaisyUI default colors: https://daisyui.com/docs/colors/ */
 
 :root {
   --primary: oklch(var(--p));
