@@ -1,0 +1,69 @@
+{% extends "web/app/app_base.html" %}
+{% load i18n %}
+{% load static %}
+{% block app %}
+
+<div class="container mx-auto p-4">
+    <h1 class="text-2xl font-bold mb-4">Connect AWS to Case: {{ case.name }}</h1>
+    <form method="POST" class="space-y-4">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <div>
+            <button type="submit" class="btn btn-primary">Connect AWS</button>
+            <a href="{% url 'case:case_detail' slug=case.slug %}" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+
+    <div class="mt-8">
+        <h2 class="text-xl font-bold mb-2">Instructions for Setting Up an AWS IAM User or Role</h2>
+        <p class="text-gray-600">
+            To connect your AWS account, you need to provide access keys for an IAM user or role with the following permissions:
+        </p>
+        <pre class="bg-gray-100 p-4 rounded text-sm overflow-x-auto">
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": [
+                "cloudtrail:DescribeTrails",
+                "cloudtrail:GetTrailStatus",
+                "cloudtrail:LookupEvents",
+                "cloudwatch:DescribeLogGroups",
+                "cloudwatch:DescribeLogStreams",
+                "cloudwatch:GetLogEvents",
+                "cloudwatch:FilterLogEvents",
+                "ec2:DescribeInstances",
+                "ec2:DescribeVolumes",
+                "ec2:DescribeSnapshots",
+                "ec2:DescribeSecurityGroups",
+                "ec2:DescribeImages",
+                "s3:ListAllMyBuckets",
+                "s3:GetBucketLocation",
+                "s3:ListBucket",
+                "s3:GetObject",
+                "iam:GetUser",
+                "iam:ListUsers",
+                "iam:GetRole",
+                "iam:ListRoles",
+                "iam:SimulatePrincipalPolicy",
+                "config:DescribeConfigRules",
+                "config:GetComplianceDetailsByConfigRule",
+                "config:GetResourceConfigHistory"
+            ],
+            "Resource": "*"
+        }
+    ]
+}
+        </pre>
+        <p class="text-gray-600 mt-4">
+            1. Log in to your AWS Management Console and navigate to the IAM service.<br>
+            2. Create a new IAM user or role for incident response.<br>
+            3. Attach the above policy to the IAM user or role.<br>
+            4. Provide the access key and secret key of the IAM user in the form above to connect your AWS account.
+        </p>
+    </div>
+</div>
+
+
+{% endblock %}

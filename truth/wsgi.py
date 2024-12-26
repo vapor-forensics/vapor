@@ -1,5 +1,5 @@
 """
-WSGI config for Vapor project.
+WSGI config for vapor project.
 
 It exposes the WSGI callable as a module-level variable named ``application``.
 

@@ -1,6 +1,6 @@
-# Vapor Forensics
+# vapor Forensics
 
-The most amazing SaaS application the world has ever seen
+Open Source Cloud Forensics: AWS | Azure | GCP
 
 ## Installation - Docker
 

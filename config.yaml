@@ -26,7 +26,7 @@ default_context:
   include_static_files: y
   marketing_email_platform: none
   post_process: n
-  project_name: Vapor Forensics
+  project_name: vapor Forensics
   project_slug: vapor
   python_package_manager: pip-tools
   standalone_front_end: none

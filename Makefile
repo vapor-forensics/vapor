@@ -42,6 +42,9 @@ dbshell: ## Get a Database shell
 test: ## Run Django tests
 	@docker compose run --rm web python manage.py test ${ARGS}
 
+superuser: ## Run Django tests
+	@docker compose run --rm web python manage.py createsuperuser
+
 init: setup-env start-bg migrations migrate  ## Quickly get up and running (start containers and migrate DB)
 
 pip_compile_cmd = uv pip compile --no-emit-package setuptools --no-strip-extras

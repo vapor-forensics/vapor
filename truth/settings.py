@@ -1,5 +1,5 @@
 """
-Django settings for Vapor Forensics project.
+Django settings for vapor Forensics project.
 
 For more information on this file, see
 https://docs.djangoproject.com/en/stable/topics/settings/
@@ -74,6 +74,12 @@ PROJECT_APPS = [
     "apps.dashboard.apps.DashboardConfig",
     "apps.api.apps.APIConfig",
     "apps.web",
+    "apps.gcp",
+    "apps.analysis",
+    "apps.aws",
+    "apps.azure",
+    "apps.case",
+    "apps.data",
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + PROJECT_APPS
@@ -335,7 +341,7 @@ EMAIL_BACKEND = env("EMAIL_BACKEND", default="django.core.mail.backends.console.
 # see https://github.com/anymail/django-anymail for more details/examples
 # EMAIL_BACKEND = "anymail.backends.mailgun.EmailBackend"
 
-EMAIL_SUBJECT_PREFIX = "[Vapor Forensics] "
+EMAIL_SUBJECT_PREFIX = "[vapor Forensics] "
 
 # Django sites
 
@@ -355,7 +361,7 @@ REST_FRAMEWORK = {
 
 
 SPECTACULAR_SETTINGS = {
-    "TITLE": "Vapor Forensics",
+    "TITLE": "vapor Forensics",
     "DESCRIPTION": "The most amazing SaaS application the world has ever seen",
     "VERSION": "0.1.0",
     "SERVE_INCLUDE_SCHEMA": False,
@@ -394,7 +400,7 @@ CELERY_BEAT_SCHEDULER = "django_celery_beat.schedulers:DatabaseScheduler"
 
 # replace any values below with specifics for your project
 PROJECT_METADATA = {
-    "NAME": gettext_lazy("Vapor Forensics"),
+    "NAME": gettext_lazy("vapor Forensics"),
     "URL": "http://localhost:8000",
     "DESCRIPTION": gettext_lazy("The most amazing SaaS application the world has ever seen"),
     "IMAGE": " ",
