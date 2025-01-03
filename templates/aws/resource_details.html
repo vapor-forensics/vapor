@@ -1,0 +1,45 @@
+{% extends "web/app/app_base.html" %}
+{% load i18n %}
+{% load static %}
+{% block app %}
+<div class="container mx-auto p-6">
+    <h1 class="text-2xl font-bold mb-4">Resource Details</h1>
+
+    <!-- Resource Information -->
+    <div class="bg-white rounded-lg shadow p-4">
+        <h2 class="text-lg font-semibold text-gray-800">{{ resource.resource_name|default:resource.resource_id }}</h2>
+        <p class="text-sm text-gray-600"><strong>Resource Type:</strong> {{ resource.resource_type }}</p>
+        <p class="text-sm text-gray-600"><strong>Region:</strong> {{ resource.aws_region }}</p>
+    </div>
+
+    <!-- Resource Details Section -->
+    <div class="mt-4">
+        <h3 class="text-lg font-medium text-gray-800">Resource Details</h3>
+        <ul class="list-none mt-2">
+            {% for key, value in resource.resource_details.items %}
+            <li class="flex items-start">
+                <strong class="text-gray-800 min-w-[150px]">{{ key }}:</strong>
+                <span class="ml-2">
+                    {% if value is iterable and value.items %}
+                    <!-- Handle Nested Dictionary -->
+                    <ul class="list-none ml-4">
+                        {% for nested_key, nested_value in value.items %}
+                        <li class="flex items-start">
+                            <strong class="text-gray-800 min-w-[100px]">{{ nested_key }}</strong>: 
+                            <span class="ml-2">{{ nested_value }}</span>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    {% elif value is iterable and value|length > 50 %}
+                    <pre class="whitespace-pre-wrap">{{ value }}</pre>
+                    {% else %}
+                    {{ value }}
+                    {% endif %}
+                </span>
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+</div>
+{% endblock %}
+
