@@ -10,7 +10,7 @@ default_context:
   ai_image_mode: none
   author_name: Rdavid
   ci: github_actions
-  css_framework: tailwind
+  css_framework: bootstrap
   css_theme: default
   database: postgres
   deploy_platform: kamal
@@ -22,12 +22,12 @@ default_context:
   enable_google_login: n
   enable_twitter_login: n
   front_end_framework: htmx
-  github_username: vapor-forensics
+  github_username: woodhack
   include_static_files: y
   marketing_email_platform: none
   post_process: n
-  project_name: Vapor Forensics
-  project_slug: vapor_forensics
+  project_name: Vapor
+  project_slug: vapor
   python_package_manager: pip-tools
   standalone_front_end: none
   stripe_payment_mode: checkout
@@ -45,7 +45,7 @@ default_context:
   use_ecommerce_example: n
   use_examples: n
   use_flowbite: n
-  use_health_checks: n
+  use_health_checks: y
   use_impersonation: n
   use_sentry: n
   use_shadcn: n
