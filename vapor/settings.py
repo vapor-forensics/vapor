@@ -1,5 +1,5 @@
 """
-Django settings for vapor Forensics project.
+Django settings for Vapor project.
 
 For more information on this file, see
 https://docs.djangoproject.com/en/stable/topics/settings/
@@ -341,7 +341,7 @@ EMAIL_BACKEND = env("EMAIL_BACKEND", default="django.core.mail.backends.console.
 # see https://github.com/anymail/django-anymail for more details/examples
 # EMAIL_BACKEND = "anymail.backends.mailgun.EmailBackend"
 
-EMAIL_SUBJECT_PREFIX = "[vapor Forensics] "
+EMAIL_SUBJECT_PREFIX = "[Vapor] "
 
 # Django sites
 
@@ -361,8 +361,8 @@ REST_FRAMEWORK = {
 
 
 SPECTACULAR_SETTINGS = {
-    "TITLE": "vapor Forensics",
-    "DESCRIPTION": "The most amazing SaaS application the world has ever seen",
+    "TITLE": "Vapor",
+    "DESCRIPTION": "Open Source Cloud Forensics",
     "VERSION": "0.1.0",
     "SERVE_INCLUDE_SCHEMA": False,
     "SWAGGER_UI_SETTINGS": {
@@ -397,13 +397,12 @@ if REDIS_URL.startswith("rediss"):
 CELERY_BROKER_URL = CELERY_RESULT_BACKEND = REDIS_URL
 CELERY_BEAT_SCHEDULER = "django_celery_beat.schedulers:DatabaseScheduler"
 
-
 # replace any values below with specifics for your project
 PROJECT_METADATA = {
-    "NAME": gettext_lazy("vapor Forensics"),
+    "NAME": gettext_lazy("Vapor"),
     "URL": "http://localhost:8000",
-    "DESCRIPTION": gettext_lazy("The most amazing SaaS application the world has ever seen"),
-    "IMAGE": " ",
+    "DESCRIPTION": gettext_lazy("Open Source Cloud Forensics"),
+    "IMAGE": "https://upload.wikimedia.org/wikipedia/commons/2/20/PEO-pegasus_black.svg",
     "KEYWORDS": "SaaS, django",
     "CONTACT_EMAIL": "vaporforensics@gmail.com",
 }
@@ -415,12 +414,6 @@ ADMINS = [("Rdavid", "vaporforensics@gmail.com")]
 
 # Add your google analytics ID to the environment to connect to Google Analytics
 GOOGLE_ANALYTICS_ID = env("GOOGLE_ANALYTICS_ID", default="")
-
-# these daisyui themes are used to set the dark and light themes for the site
-# they must be valid themes included in your tailwind.config.js file.
-# more here: https://daisyui.com/docs/themes/
-LIGHT_THEME = "light"
-DARK_THEME = "dark"
 
 LOGGING = {
     "version": 1,
@@ -442,7 +435,7 @@ LOGGING = {
         },
         "vapor": {
             "handlers": ["console"],
-            "level": env("vapor_LOG_LEVEL", default="INFO"),
+            "level": env("VAPOR_LOG_LEVEL", default="INFO"),
         },
     },
 }

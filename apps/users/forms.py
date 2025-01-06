@@ -63,7 +63,7 @@ class TermsSignupForm(TurnstileSignupForm):
         super().__init__(*args, **kwargs)
         # blank out overly-verbose help text
         self.fields["password1"].help_text = ""
-        link = '<a class="link" href="{}" target="_blank">{}</a>'.format(
+        link = '<a href="{}" target="_blank">{}</a>'.format(
             reverse("web:terms"),
             _("Terms and Conditions"),
         )

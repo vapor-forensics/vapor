@@ -1,0 +1,42 @@
+{% load i18n %}
+<aside class="d-none d-md-block">
+  <div class="mb-1">
+    {% translate "Application" %}
+  </div>
+  <ul class="nav nav-pills flex-column">
+    {% include "web/components/app_menu_items.html" %}
+  </ul>
+{% if not user.is_anonymous %}
+  <div class="mt-3 mb-1">
+    {% translate "My Account" %}
+  </div>
+  <ul class="nav nav-pills flex-column">
+    <li class="nav-item">
+      <a href="{% url 'users:user_profile' %}" class="nav-link {% if active_tab == 'profile' %}active{% endif %}">
+        <span class="pg-icon"><i class="fa fa-user"></i></span><span>{% translate "Profile" %}</span>
+      </a>
+    </li>
+    {% if user.has_usable_password %}
+      <li class="nav-item">
+        <a href="{% url 'account_change_password' %}" class="nav-link {% if 'accounts/password/change' in request.path %}active{% endif %}">
+          <span class="pg-icon"><i class="fa fa-unlock-alt"></i></span><span>{% translate "Change Password" %}</span>
+        </a>
+      </li>
+    {% endif %}
+    <li class="nav-item">
+      <a href="{% url 'account_logout' %}"
+         class="nav-link {% if 'accounts/logout' in request.path %}active{% endif %}">
+        <span class="pg-icon"><i class="fa fa-sign-out"></i></span><span>{% translate "Sign out" %}</span>
+      </a>
+    </li>
+  </ul>
+{% endif %}
+{% if user.is_superuser %}
+  <div class="mt-3 mb-1">
+    {% translate "Admin" %}
+  </div>
+  <ul class="nav nav-pills flex-column">
+    {% include "web/components/admin_menu_items.html" %}
+  </ul>
+{% endif %}
+</aside>

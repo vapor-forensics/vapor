@@ -1,5 +1,8 @@
+from django.conf import settings
+from django.http import Http404
 from django.shortcuts import render
 from django.utils.translation import gettext_lazy as _
+from health_check.views import MainView
 
 from django.contrib.auth.decorators import login_required
 from apps.case.models import Case
