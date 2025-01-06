@@ -2,36 +2,36 @@
 {% load i18n %}
 {% load static %}
 {% block app %}
-<div class="container mx-auto p-6">
-    <h1 class="text-2xl font-bold mb-4">Resource Details</h1>
+<div class="container p-6">
+    <h1 class="fs-4 fw-bold mb-4">Resource Details</h1>
 
     <!-- Resource Information -->
-    <div class="bg-white rounded-lg shadow p-4">
-        <h2 class="text-lg font-semibold text-gray-800">{{ resource.resource_name|default:resource.resource_id }}</h2>
-        <p class="text-sm text-gray-600"><strong>Resource Type:</strong> {{ resource.resource_type }}</p>
-        <p class="text-sm text-gray-600"><strong>Region:</strong> {{ resource.aws_region }}</p>
+    <div class="bg-white rounded shadow-sm p-4">
+        <h2 class="fs-5 fw-semibold text-dark">{{ resource.resource_name|default:resource.resource_id }}</h2>
+        <p class="small text-muted"><strong>Resource Type:</strong> {{ resource.resource_type }}</p>
+        <p class="small text-muted"><strong>Region:</strong> {{ resource.aws_region }}</p>
     </div>
 
     <!-- Resource Details Section -->
     <div class="mt-4">
-        <h3 class="text-lg font-medium text-gray-800">Resource Details</h3>
-        <ul class="list-none mt-2">
+        <h3 class="fs-6 fw-medium text-dark">Resource Details</h3>
+        <ul class="list-unstyled mt-2">
             {% for key, value in resource.resource_details.items %}
-            <li class="flex items-start">
-                <strong class="text-gray-800 min-w-[150px]">{{ key }}:</strong>
-                <span class="ml-2">
+            <li class="d-flex">
+                <strong class="text-dark me-2" style="min-width: 150px;">{{ key }}:</strong>
+                <span>
                     {% if value is iterable and value.items %}
                     <!-- Handle Nested Dictionary -->
-                    <ul class="list-none ml-4">
+                    <ul class="list-unstyled ms-3">
                         {% for nested_key, nested_value in value.items %}
-                        <li class="flex items-start">
-                            <strong class="text-gray-800 min-w-[100px]">{{ nested_key }}</strong>: 
-                            <span class="ml-2">{{ nested_value }}</span>
+                        <li class="d-flex">
+                            <strong class="text-dark me-2" style="min-width: 100px;">{{ nested_key }}</strong>: 
+                            <span>{{ nested_value }}</span>
                         </li>
                         {% endfor %}
                     </ul>
                     {% elif value is iterable and value|length > 50 %}
-                    <pre class="whitespace-pre-wrap">{{ value }}</pre>
+                    <pre class="text-break">{{ value }}</pre>
                     {% else %}
                     {{ value }}
                     {% endif %}
@@ -42,4 +42,3 @@
     </div>
 </div>
 {% endblock %}
-

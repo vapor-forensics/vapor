@@ -3,27 +3,21 @@
 {% load static %}
 {% block app %}
 
-<div class="container mx-auto p-4">
-    <h1 class="text-2xl font-bold mb-4">Create a New Case</h1>
-    <form method="POST" class="space-y-4">
+<div class="container p-4">
+    <h1 class="fs-4 fw-bold mb-4">Create a New Case</h1>
+    <form method="POST" class="mb-4">
         {% csrf_token %}
-        <div>
-            <label class="label">
-                <span class="label-text">Case Name</span>
-            </label>
-            <input type="text" name="name" class="input input-bordered w-full" placeholder="Enter case name" required>
+        <div class="mb-3">
+            <label for="name" class="form-label">Case Name</label>
+            <input type="text" name="name" id="name" class="form-control" placeholder="Enter case name" required>
         </div>
-        <div>
-            <label class="label">
-                <span class="label-text">Description</span>
-            </label>
-            <textarea name="description" class="textarea textarea-bordered w-full" placeholder="Enter case description"></textarea>
+        <div class="mb-3">
+            <label for="description" class="form-label">Description</label>
+            <textarea name="description" id="description" class="form-control" placeholder="Enter case description"></textarea>
         </div>
-        <div>
-            <label class="label">
-                <span class="label-text">Status</span>
-            </label>
-            <select name="status" class="select select-bordered w-full">
+        <div class="mb-3">
+            <label for="status" class="form-label">Status</label>
+            <select name="status" id="status" class="form-select">
                 <option value="investigating" selected>Investigating</option>
                 <option value="closed">Closed</option>
             </select>
@@ -33,6 +27,5 @@
         </div>
     </form>
 </div>
-
 
 {% endblock %}

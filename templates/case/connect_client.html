@@ -3,20 +3,21 @@
 {% load static %}
 {% block app %}
 
-<div class="container mx-auto p-4">
-    <h1 class="text-2xl font-bold mb-4">Connect a Client to Case: {{ case.name }}</h1>
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+<div class="container p-4">
+    <h1 class="fs-4 fw-bold mb-4">Connect a Client to Case: {{ case.name }}</h1>
+    <div class="row g-4">
         <!-- AWS -->
-        <div class="card w-full bg-base-100 shadow-md">
-            <div class="card-body items-center text-center">
-                <img src="{% static 'images/cloud/aws.svg' %}" alt="AWS" class="w-4 h-4 mb-4">
-                <h2 class="card-title">AWS</h2>
-                <a href="{% url 'aws:connect_aws' slug=case.slug %}" class="btn btn-primary">Connect AWS</a>
+        <div class="col-12 col-md-4">
+            <div class="card shadow-sm text-center">
+                <div class="card-body">
+                    <img src="{% static 'images/cloud/aws.svg' %}" alt="AWS" class="mb-3" style="width: 64px; height: 64px;">
+                    <h2 class="fs-5 fw-bold">AWS</h2>
+                    <a href="{% url 'aws:connect_aws' slug=case.slug %}" class="btn btn-primary mt-3">Connect AWS</a>
+                </div>
             </div>
         </div>
         <!-- Add GCP and Azure options later -->
     </div>
 </div>
-
 
 {% endblock %}
