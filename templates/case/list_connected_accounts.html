@@ -31,7 +31,11 @@
         <tbody>
             {% for account in aws_accounts %}
             <tr>
-                <td>{{ account.account_id }}</td>
+                <td>
+                    <a href="{% url 'aws:list_aws_resources' account.id %}" class="text-blue-600 hover:underline">
+                        {{ account.account_id }}
+                    </a>
+                </td>
                 <td>{{ account.aws_region }}</td>
                 <td>{{ account.added_by.username }}</td>
                 <td>{{ account.added_at|date:"Y-m-d H:i" }}</td>
@@ -49,6 +53,9 @@
                         onclick="if(confirm('Are you sure you want to delete this account? This action cannot be undone.')) { window.location.href='{% url 'aws:delete_account' account.id %}'; }">
                         Delete
                     </button>
+                    <a href="{% url 'aws:pull_aws_resources' account.id %}" class="btn btn-primary btn-sm">
+                        Pull Resources
+                    </a>
                 </td>
             </tr>
             {% endfor %}

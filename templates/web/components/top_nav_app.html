@@ -1,8 +1,83 @@
-{% extends 'web/components/top_nav.html' %}
-{% block mobile_nav %}
-<li class="menu-title">
-  <span>Site</span>
-</li>
-{{ block.super }}
-{% include 'web/components/app_nav_menu_items.html' %}
-{% endblock %}
+{% load i18n %}
+<div class="navbar bg-base-100 shadow-lg">
+  <!-- Left Section (Dashboard Link) -->
+  <div class="navbar-start">
+    <a href="{% url 'web:home' %}" 
+       class="flex items-center space-x-2 btn btn-ghost normal-case text-lg {% if active_tab == 'dashboard' %}active{% endif %}">
+      <i class="fa fa-home h-4 w-4"></i>
+      <span>{% translate "Dashboard" %}</span>
+    </a>
+  </div>
+
+  <!-- Right Section (Other Navigation Items) -->
+  <div class="navbar-end">
+    <ul class="menu menu-horizontal px-1">
+      {% if not user.is_anonymous %}
+      <!-- My Account Dropdown -->
+      <li class="dropdown dropdown-hover dropdown-end">
+        <label tabindex="0" class="flex items-center space-x-2 btn btn-ghost">
+          <span>{% translate "My Account" %}</span>
+          <i class="fa fa-chevron-down"></i>
+        </label>
+        <ul tabindex="0" class="dropdown-content menu p-2 shadow bg-base-100 rounded-box w-52">
+          <li>
+            <a href="{% url 'users:user_profile' %}" 
+               class="flex items-center space-x-2 {% if active_tab == 'profile' %}active{% endif %}">
+              <i class="fa fa-user h-4 w-4"></i>
+              <span>{% translate "Profile" %}</span>
+            </a>
+          </li>
+          {% if user.has_usable_password %}
+          <li>
+            <a href="{% url 'account_change_password' %}" 
+               class="flex items-center space-x-2 {% if 'accounts/password/change' in request.path %}active{% endif %}">
+              <i class="fa fa-unlock-alt h-4 w-4"></i>
+              <span>{% translate "Change Password" %}</span>
+            </a>
+          </li>
+          {% endif %}
+          <li>
+            <a href="{% url 'account_logout' %}" 
+               class="flex items-center space-x-2 {% if 'accounts/logout' in request.path %}active{% endif %}">
+              <i class="fa fa-sign-out h-4 w-4"></i>
+              <span>{% translate "Sign out" %}</span>
+            </a>
+          </li>
+        </ul>
+      </li>
+      {% endif %}
+
+      {% if user.is_superuser %}
+      <!-- Admin Dropdown -->
+      <li class="dropdown dropdown-hover dropdown-end">
+        <label tabindex="0" class="flex items-center space-x-2 btn btn-ghost">
+          <span>{% translate "Admin" %}</span>
+          <i class="fa fa-chevron-down"></i>
+        </label>
+        <ul tabindex="0" class="dropdown-content menu p-2 shadow bg-base-100 rounded-box w-52">
+          <li>
+            <a href="{% url 'dashboard:dashboard' %}" 
+               class="flex items-center space-x-2 {% if active_tab == 'project-dashboard' %}active{% endif %}">
+              <i class="fa fa-bar-chart-o h-4 w-4"></i>
+              <span>{% translate "Project Dashboard" %}</span>
+            </a>
+          </li>
+        </ul>
+      </li>
+      {% endif %}
+    </ul>
+    <div class="mx-2 dropdown dropdown-end" x-data="{ open: false }">
+      <label tabindex="0" class="btn btn-ghost btn-sm btn-circle" @click="open = !open">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" class="dark:hidden" />
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" class="hidden dark:block" />
+        </svg>
+      </label>
+      <ul tabindex="0" class="dropdown-content menu p-2 shadow bg-base-100 rounded-box w-52" x-show="open" @click.away="open = false">
+        <li><button @click="localStorage.setItem('theme', '{{ light_theme|default:'light' }}'); syncDarkMode(); open = false">Light</button></li>
+        <li><button @click="localStorage.setItem('theme', '{{ dark_theme|default:'dark' }}'); syncDarkMode(); open = false">Dark</button></li>
+        <li><button @click="localStorage.setItem('theme', 'system'); syncDarkMode(); open = false">System</button></li>
+      </ul>
+    </div>
+  </div>
+</div>
