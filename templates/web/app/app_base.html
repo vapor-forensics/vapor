@@ -1,22 +1,19 @@
 {% extends "web/base.html" %}
 {% load static %}
-{% block top_nav %}
-  {% include 'web/components/top_nav_app.html' %}
-{% endblock %}
 {% block body %}
-  {% block notifications %}
-  {% endblock %}
-  <section class="section">
-    <div class="container flex flex-row">
-      <div class="w-64 hidden lg:flex">
-        {% block sidebar-nav %}
-          {% include "web/components/app_nav.html" %}
-        {% endblock %}
-      </div>
-      <div class="w-full">
-        {% block app %}
-        {% endblock %}
-      </div>
+{% block notifications %}
+{% endblock %}
+<div class="container my-3">
+  <div class="row">
+    <div class="col-auto">
+      {% block sidebar-nav %}
+        {% include "web/components/app_nav.html" %}
+      {% endblock %}
     </div>
-  </section>
+    <div class="col-md">
+      {% block app %}
+      {% endblock %}
+    </div>
+  </div>
+</div>
 {% endblock %}

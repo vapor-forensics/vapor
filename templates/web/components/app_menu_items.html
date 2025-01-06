@@ -1,0 +1,6 @@
+{% load i18n %}
+<li class="nav-item">
+  <a href="{% url 'web:home' %}" class="nav-link {% if active_tab == 'dashboard' %}active{% endif %}">
+    <span class="pg-icon"><i class="fa fa-home"></i></span><span>{% translate "Dashboard" %}</span>
+  </a>
+</li>

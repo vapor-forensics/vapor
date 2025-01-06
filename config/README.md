@@ -3,6 +3,8 @@
 This folder contains the configuration and scripts for deploying using [Kamal](https://kamal-deploy.org/),
 a Ruby-based deployment tool.
 
+The full documentation can be found at [docs.saaspegasus.com/deployment/kamal/](https://docs.saaspegasus.com/deployment/kamal/).
+
 Below are some useful commands for deploying and managing the app.
 
 See the [Kamal documentation](https://kamal-deploy.org/docs/commands) for more commands.

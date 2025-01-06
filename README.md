@@ -1,4 +1,4 @@
-# Vapor Forensics
+# Vapor
 
 Vapor is an open source Cloud Forensic tool for Amazon Web Service (AWS), Microsoft Azure and Google Cloud Platform (GCP).
 

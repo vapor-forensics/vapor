@@ -1,8 +1,8 @@
 /* tslint:disable */
 /* eslint-disable */
 /**
- * vapor Forensics
- * The most amazing SaaS application the world has ever seen
+ * Vapor
+ * Open Source Cloud Forensics
  *
  * The version of the OpenAPI document: 0.1.0
  * 
