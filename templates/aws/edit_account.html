@@ -1,0 +1,19 @@
+{% extends "web/app/app_base.html" %}
+{% load i18n %}
+{% load static %}
+{% block app %}
+
+<div class="container mx-auto p-4">
+    <h1 class="text-2xl font-bold mb-4">Edit AWS Account: {{ account.account_id }}</h1>
+    <form method="POST" class="space-y-4">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <div>
+            <button type="submit" class="btn btn-primary">Save Changes</button>
+            <a href="{% url 'case:list_connected_accounts' slug=account.case.slug %}" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+
+
+{% endblock %}

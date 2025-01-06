@@ -1,0 +1,38 @@
+{% extends "web/app/app_base.html" %}
+{% load i18n %}
+{% load static %}
+{% block app %}
+
+<div class="container mx-auto p-4">
+    <h1 class="text-2xl font-bold mb-4">Create a New Case</h1>
+    <form method="POST" class="space-y-4">
+        {% csrf_token %}
+        <div>
+            <label class="label">
+                <span class="label-text">Case Name</span>
+            </label>
+            <input type="text" name="name" class="input input-bordered w-full" placeholder="Enter case name" required>
+        </div>
+        <div>
+            <label class="label">
+                <span class="label-text">Description</span>
+            </label>
+            <textarea name="description" class="textarea textarea-bordered w-full" placeholder="Enter case description"></textarea>
+        </div>
+        <div>
+            <label class="label">
+                <span class="label-text">Status</span>
+            </label>
+            <select name="status" class="select select-bordered w-full">
+                <option value="investigating" selected>Investigating</option>
+                <option value="closed">Closed</option>
+            </select>
+        </div>
+        <div>
+            <button type="submit" class="btn btn-primary">Create Case</button>
+        </div>
+    </form>
+</div>
+
+
+{% endblock %}

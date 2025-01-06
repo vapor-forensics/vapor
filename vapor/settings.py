@@ -64,10 +64,6 @@ THIRD_PARTY_APPS = [
     "celery_progress",
     "whitenoise.runserver_nostatic",  # whitenoise runserver
     "waffle",
-    "health_check",
-    "health_check.db",
-    "health_check.contrib.celery",
-    "health_check.contrib.redis",
     "django_celery_beat",
     "template_partials.apps.SimpleAppConfig",
 ]
@@ -78,6 +74,12 @@ PROJECT_APPS = [
     "apps.dashboard.apps.DashboardConfig",
     "apps.api.apps.APIConfig",
     "apps.web",
+    "apps.gcp",
+    "apps.analysis",
+    "apps.aws",
+    "apps.azure",
+    "apps.case",
+    "apps.data",
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + PROJECT_APPS
@@ -394,10 +396,6 @@ if REDIS_URL.startswith("rediss"):
 
 CELERY_BROKER_URL = CELERY_RESULT_BACKEND = REDIS_URL
 CELERY_BEAT_SCHEDULER = "django_celery_beat.schedulers:DatabaseScheduler"
-
-# Health Checks
-# A list of tokens that can be used to access the health check endpoint
-HEALTH_CHECK_TOKENS = env.list("HEALTH_CHECK_TOKENS", default="")
 
 # replace any values below with specifics for your project
 PROJECT_METADATA = {
