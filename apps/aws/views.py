@@ -7,7 +7,7 @@ from apps.case.models import Case
 import boto3
 from .utils import validate_aws_credentials 
 from django.contrib import messages
-from .tasks import pull_aws_resources_task
+from .tasks import pull_aws_resources_task, pull_log_source_task
 
 
 
@@ -109,3 +109,19 @@ def aws_resource_details(request, resource_id):
     """
     resource = get_object_or_404(AWSResource, id=resource_id)
     return render(request, 'aws/resource_details.html', {'resource': resource})
+
+#This is the trigger for getting the available logs of the AWS account.
+#It calls a background worker to get the data (need to add progress bar)
+@login_required
+def pull_log_source(request, account_id):
+    aws_account = get_object_or_404(AWSAccount, id=account_id)
+
+    if not aws_account.validated:
+        messages.error(request, "Cannot pull log sources because the AWS account credentials are not validated.")
+        return redirect('case:list_connected_accounts', slug=aws_account.case.slug)
+
+    # Trigger background task
+    pull_log_source_task.delay(account_id)
+    messages.info(request, "Discovering available log sources. This may take a few minutes.")
+
+    return redirect('case:list_connected_accounts', slug=aws_account.case.slug)

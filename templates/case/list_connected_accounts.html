@@ -57,6 +57,9 @@
                         <a href="{% url 'aws:pull_aws_resources' account.id %}" class="btn btn-primary btn-sm">
                             Pull Resources
                         </a>
+                        <a href="{% url 'aws:pull_log_source' account.id %}" class="btn btn-primary btn-sm">
+                            Find Logging
+                        </a>
                     </td>
                 </tr>
                 {% endfor %}
