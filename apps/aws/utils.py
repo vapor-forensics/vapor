@@ -1,8 +1,14 @@
 import boto3
-from .models import AWSResource, AWSLogSource
-from datetime import datetime
+from .models import AWSResource, AWSLogSource, AWSAccount
+from apps.data.models import NormalizedLog
+from apps.case.models import Case
+from datetime import datetime, timedelta
 from botocore.exceptions import EndpointConnectionError, ClientError
 import logging
+from django.db import transaction
+import json
+
+
 logger = logging.getLogger(__name__)
 
 # Validate AWS credentials by calling the STS GetCallerIdentity API.
@@ -328,126 +334,124 @@ def discover_log_sources(aws_account):
 
     logger.info(f"Completed discovering log sources for AWS account: {aws_account.account_id}")
 
-"""
- #Discover and save AWS resources for an account, more can be added, but update IAM Policy.
-def pull_aws_resources(aws_account):
+
+# Fetch the logs from cloudwatch log groups (can be filtered by datetime/resource)
+# Add functionality to get logs that are stored in s3 buckets too
+def fetch_logs(account_id, case_id, start_time, end_time, resource_ids=None):
+    """
+    Fetch logs for the specified AWS account and time period, normalize them, and save them.
+    """
+    aws_account = AWSAccount.objects.get(account_id=account_id)
+    case = Case.objects.get(id=case_id)
+
+    # Initialize AWS Session with account credentials
+    session = boto3.Session(
+        aws_access_key_id=aws_account.aws_access_key,
+        aws_secret_access_key=aws_account.aws_secret_key,
+        region_name=aws_account.aws_region
+    )
+    logs_client = session.client('logs')
+
+    # Get resources if specified, otherwise fetch all log groups
+    if resource_ids:
+        resources = AWSResource.objects.filter(id__in=resource_ids)
+    else:
+        # Fallback to fetching all log groups
+        paginator = logs_client.get_paginator('describe_log_groups')
+        all_log_groups = []
+        for page in paginator.paginate():
+            all_log_groups.extend(page.get('logGroups', []))
+        
+        resources = [
+            {
+                'resource_name': log_group.get('logGroupName'),
+                'aws_region': aws_account.aws_region,
+                'resource_type': 'LogGroup',
+            }
+            for log_group in all_log_groups
+        ]
+
+    for resource in resources:
+        log_group_name = resource['resource_name'] if isinstance(resource, dict) else resource.resource_name
+        resource_region = resource['aws_region'] if isinstance(resource, dict) else resource.aws_region or aws_account.aws_region
+
+        if not log_group_name:
+            print(f"Skipping resource with invalid log group name.")
+            continue
+
+        paginator = logs_client.get_paginator('filter_log_events')
+        try:
+            pages = paginator.paginate(
+                logGroupName=log_group_name,
+                startTime=int(start_time.timestamp() * 1000),
+                endTime=int(end_time.timestamp() * 1000),
+            )
+            for page in pages:
+                for event in page.get('events', []):
+                    log_data = {
+                        'case': case,
+                        'log_id': event.get('eventId'),
+                        'log_source': 'aws',
+                        'log_type': resource.get('resource_type', 'LogGroup'),
+                        'event_name': event.get('message', '').split(' ')[0],
+                        'event_time': datetime.utcfromtimestamp(event.get('timestamp') / 1000),
+                        'user_identity': {},
+                        'ip_address': None,
+                        'resources': {
+                            'aws_region': resource_region,
+                            'resource_id': resource.get('resource_name'),
+                        },
+                        'raw_data': event,
+                        'extra_data': {},
+                    }
+                    normalized_log = NormalizedLog(**log_data)
+                    normalized_log.save()
+                    if isinstance(resource, AWSResource):
+                        normalized_log.aws_resources.add(resource)
+        except logs_client.exceptions.ResourceNotFoundException:
+            print(f"Log group {log_group_name} not found in region {resource_region}.")
+            continue
+
+def fetch_management_event_history(account_id, case_id):
+
+    aws_account = AWSAccount.objects.get(account_id=account_id)
+    case = Case.objects.get(id=case_id)
 
     session = boto3.Session(
         aws_access_key_id=aws_account.aws_access_key,
         aws_secret_access_key=aws_account.aws_secret_key,
         region_name=aws_account.aws_region
     )
+    client = session.client('cloudtrail')
 
-    # Discover EC2 instances
-    def fetch_ec2_instances():
-        ec2 = session.client('ec2')
-        instances = ec2.describe_instances()
-        for reservation in instances.get('Reservations', []):
-            for instance in reservation.get('Instances', []):
-                resource_region = instance['Placement']['AvailabilityZone'][:-1]  # Remove the last character (zone) to get the region
-                yield {
-                    'resource_id': instance['InstanceId'],
-                    'resource_type': 'EC2',
-                    'resource_name': next(
-                        (tag['Value'] for tag in instance.get('Tags', []) if tag['Key'] == 'Name'),
-                        None
-                    ),
-                    'resource_details': serialize_resource_details(instance),
-                    'aws_region': resource_region,
+    # Paginator for management event history
+    paginator = client.get_paginator('lookup_events')
+
+    with transaction.atomic():
+        for page in paginator.paginate():
+            for event in page.get('Events', []):
+                # Ensure event data is JSON serializable
+                raw_event = json.loads(json.dumps(event, default=str))
+
+                log_data = {
+                    'case_id': case_id,
+                    'log_id': raw_event.get('EventId'),
+                    'log_source': 'aws',
+                    'log_type': raw_event.get('EventSource'),
+                    'event_name': raw_event.get('EventName'),
+                    'event_time': raw_event.get('EventTime'),
+                    'user_identity': raw_event.get('Username', {}),
+                    'ip_address': raw_event.get('SourceIPAddress'),
+                    'resources': raw_event.get('Resources', []),
+                    'raw_data': raw_event,  # Ensure all fields are JSON serializable
+                    'extra_data': {},  # Add additional metadata if needed
                 }
 
-    # Discover S3 buckets
-    def fetch_s3_buckets():
-        s3 = session.client('s3')
-        buckets = s3.list_buckets()
-        for bucket in buckets.get('Buckets', []):
-            bucket_name = bucket['Name']
-            bucket_region = s3.get_bucket_location(Bucket=bucket_name)['LocationConstraint']
-            bucket_region = bucket_region or None
-            yield {
-                'resource_id': bucket_name,
-                'resource_type': 'S3',
-                'resource_name': bucket_name,
-                'resource_details': serialize_resource_details(bucket),
-                'aws_region': bucket_region,
-            }
+                # Normalize and save the log
+                normalized_log = NormalizedLog.objects.create(**log_data)
 
-    # Discover IAM users
-    def fetch_iam_users():
-        iam = session.client('iam')
-        users = iam.list_users()
-        for user in users.get('Users', []):
-            yield {
-                'resource_id': user['UserId'],
-                'resource_type': 'IAM User',
-                'resource_name': user['UserName'],
-                'resource_details': serialize_resource_details(user),
-                'aws_region': None,  # IAM is global
-            }
-
-    # Discover IAM roles
-    def fetch_iam_roles():
-        iam = session.client('iam')
-        roles = iam.list_roles()
-        for role in roles.get('Roles', []):
-            yield {
-                'resource_id': role['RoleId'],
-                'resource_type': 'IAM Role',
-                'resource_name': role['RoleName'],
-                'resource_details': serialize_resource_details(role),
-                'aws_region': None,  # IAM is global
-            }
-
-    # Discover Lambda functions
-    def fetch_lambda_functions():
-        lambda_client = session.client('lambda')
-        functions = lambda_client.list_functions()
-        for function in functions.get('Functions', []):
-            resource_region = function['FunctionArn'].split(':')[3]  # Extract region from ARN
-            yield {
-                'resource_id': function['FunctionArn'],
-                'resource_type': 'Lambda Function',
-                'resource_name': function['FunctionName'],
-                'resource_details': serialize_resource_details(function),
-                'aws_region': resource_region,
-            }
-
-    # Discover RDS instances
-    def fetch_rds_instances():
-        rds = session.client('rds')
-        instances = rds.describe_db_instances()
-        for instance in instances.get('DBInstances', []):
-            resource_region = instance['AvailabilityZone'][:-1]  # Remove the last character (zone) to get the region
-            yield {
-                'resource_id': instance['DBInstanceIdentifier'],
-                'resource_type': 'RDS',
-                'resource_name': instance['DBInstanceIdentifier'],
-                'resource_details': serialize_resource_details(instance),
-                'aws_region': resource_region,
-            }
-
-    # Collect resources from all services
-    resource_generators = [
-        fetch_ec2_instances,
-        fetch_s3_buckets,
-        fetch_iam_users,
-        fetch_iam_roles,
-        fetch_lambda_functions,
-        fetch_rds_instances
-    ]
-
-    for generator in resource_generators:
-        for resource in generator():
-            AWSResource.objects.get_or_create(
-                account=aws_account,
-                case=aws_account.case,
-                resource_id=resource['resource_id'],
-                defaults={
-                    'resource_type': resource['resource_type'],
-                    'resource_name': resource['resource_name'],
-                    'resource_details': resource['resource_details'],
-                    'aws_region': resource['aws_region'],
-                }
-            )
-
-"""
+                # Link to resources if applicable
+                for resource in raw_event.get('Resources', []):
+                    aws_resource = AWSResource.objects.filter(resource_name=resource.get('ResourceName')).first()
+                    if aws_resource:
+                        normalized_log.aws_resources.add(aws_resource)

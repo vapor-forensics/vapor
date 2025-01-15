@@ -33,7 +33,7 @@
                 {% for account in aws_accounts %}
                 <tr>
                     <td>
-                        <a href="{% url 'aws:list_aws_resources' account.id %}" class="text-primary text-decoration-underline">
+                        <a href="{% url 'aws:account_details' account.id %}" class="text-primary text-decoration-underline">
                             {{ account.account_id }}
                         </a>
                     </td>
@@ -59,6 +59,12 @@
                         </a>
                         <a href="{% url 'aws:pull_log_source' account.id %}" class="btn btn-primary btn-sm">
                             Find Logging
+                        </a>
+                        <a href="{% url 'aws:trigger_log_fetch' account.account_id %}" class="btn btn-primary btn-sm">
+                            Get Logs
+                        </a>
+                        <a href="{% url 'aws:fetch_management_events' account.account_id %}" class="btn btn-primary btn-sm">
+                            Get Management Logs (90 days)
                         </a>
                     </td>
                 </tr>

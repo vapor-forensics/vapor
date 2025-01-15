@@ -1,9 +1,10 @@
 from celery import shared_task
 from .models import AWSAccount
-from .utils import pull_aws_resources, discover_log_sources
+from .utils import pull_aws_resources, discover_log_sources, fetch_logs, fetch_management_event_history
 import logging
 
 logger = logging.getLogger('aws_tasks')
+logger = logging.getLogger(__name__)
 
 # This is a background task to pull AWS resources for a given account ID.
 @shared_task
@@ -25,7 +26,7 @@ def pull_aws_resources_task(account_id):
         raise
 
 
-logger = logging.getLogger(__name__)
+
 
 # This background task is used to find available logs for an aws accoutt ID
 @shared_task
@@ -48,3 +49,13 @@ def pull_log_source_task(account_id):
     except Exception as e:
         logger.error(f"Error discovering log sources for AWS account ID {account_id}: {e}")
         raise
+
+
+# Celery task to fetch and normalize logs using the utility function.
+@shared_task
+def fetch_and_normalize_logs_task(account_id, case_id, start_time, end_time, resource_ids=None):
+    fetch_logs(account_id, case_id, start_time, end_time, resource_ids)
+
+@shared_task
+def fetch_management_history_task(account_id, case_id):
+    fetch_management_event_history(account_id, case_id)
