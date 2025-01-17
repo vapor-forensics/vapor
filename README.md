@@ -4,9 +4,9 @@ Vapor is an open source Cloud Forensic tool for Amazon Web Service (AWS), Micros
 
 Current status: Under rapid development - The initial version will be released soon.
 
-## AWS - In progress
-## AZURE - To be started
-## GCP - To be started
+### AWS - In progress
+### AZURE - To be started
+### GCP - To be started
 
 ## Installation - Docker
 
