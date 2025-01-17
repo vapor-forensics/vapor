@@ -3,9 +3,11 @@ from .models import AWSResource, AWSLogSource, AWSAccount
 from apps.data.models import NormalizedLog
 from apps.case.models import Case
 from datetime import datetime, timedelta
+import datetime, gzip
 from botocore.exceptions import EndpointConnectionError, ClientError
 import logging
 from django.db import transaction
+from django.utils import timezone
 import json
 
 
@@ -334,83 +336,98 @@ def discover_log_sources(aws_account):
 
     logger.info(f"Completed discovering log sources for AWS account: {aws_account.account_id}")
 
+# this function extracts logs from a s3 bucket based on the users selected prefix
+def fetch_and_normalize_cloudtrail_logs(account_id, resource_id, prefix, start_date, end_date, case_id):
+    try:
+        account = AWSAccount.objects.get(account_id=account_id)
+        resource = AWSResource.objects.get(id=resource_id)
+    except (AWSAccount.DoesNotExist, AWSResource.DoesNotExist):
+        print("DEBUG: Account or Resource not found.")
+        return
 
-# Fetch the logs from cloudwatch log groups (can be filtered by datetime/resource)
-# Add functionality to get logs that are stored in s3 buckets too
-def fetch_logs(account_id, case_id, start_time, end_time, resource_ids=None):
-    """
-    Fetch logs for the specified AWS account and time period, normalize them, and save them.
-    """
-    aws_account = AWSAccount.objects.get(account_id=account_id)
-    case = Case.objects.get(id=case_id)
-
-    # Initialize AWS Session with account credentials
     session = boto3.Session(
-        aws_access_key_id=aws_account.aws_access_key,
-        aws_secret_access_key=aws_account.aws_secret_key,
-        region_name=aws_account.aws_region
+        aws_access_key_id=account.aws_access_key,
+        aws_secret_access_key=account.aws_secret_key,
+        region_name=resource.aws_region or account.default_region
     )
-    logs_client = session.client('logs')
+    s3 = session.client("s3")
+    bucket_name = resource.resource_name or resource.resource_id
 
-    # Get resources if specified, otherwise fetch all log groups
-    if resource_ids:
-        resources = AWSResource.objects.filter(id__in=resource_ids)
-    else:
-        # Fallback to fetching all log groups
-        paginator = logs_client.get_paginator('describe_log_groups')
-        all_log_groups = []
-        for page in paginator.paginate():
-            all_log_groups.extend(page.get('logGroups', []))
+    # Convert date strings to date objects
+    start_date_obj = datetime.datetime.strptime(start_date, "%Y-%m-%d").date()
+    end_date_obj   = datetime.datetime.strptime(end_date,   "%Y-%m-%d").date()
+
+    # Ensure prefix ends with '/'
+    if prefix and not prefix.endswith("/"):
+        prefix += "/"
+
+    current_date = start_date_obj
+    while current_date <= end_date_obj:
+        date_folder = f"{current_date.year}/{current_date.strftime('%m')}/{current_date.strftime('%d')}/"
+        final_prefix = prefix + date_folder
         
-        resources = [
-            {
-                'resource_name': log_group.get('logGroupName'),
-                'aws_region': aws_account.aws_region,
-                'resource_type': 'LogGroup',
-            }
-            for log_group in all_log_groups
-        ]
+        print(f"DEBUG: Checking prefix '{final_prefix}' in bucket '{bucket_name}'")
 
-    for resource in resources:
-        log_group_name = resource['resource_name'] if isinstance(resource, dict) else resource.resource_name
-        resource_region = resource['aws_region'] if isinstance(resource, dict) else resource.aws_region or aws_account.aws_region
+        paginator = s3.get_paginator("list_objects_v2")
+        page_iterator = paginator.paginate(Bucket=bucket_name, Prefix=final_prefix)
 
-        if not log_group_name:
-            print(f"Skipping resource with invalid log group name.")
-            continue
+        any_objects_found = False
+        for page in page_iterator:
+            contents = page.get("Contents", [])
+            if not contents:
+                print(f"DEBUG: No objects in prefix '{final_prefix}' on this page.")
+                continue
 
-        paginator = logs_client.get_paginator('filter_log_events')
-        try:
-            pages = paginator.paginate(
-                logGroupName=log_group_name,
-                startTime=int(start_time.timestamp() * 1000),
-                endTime=int(end_time.timestamp() * 1000),
-            )
-            for page in pages:
-                for event in page.get('events', []):
-                    log_data = {
-                        'case': case,
-                        'log_id': event.get('eventId'),
-                        'log_source': 'aws',
-                        'log_type': resource.get('resource_type', 'LogGroup'),
-                        'event_name': event.get('message', '').split(' ')[0],
-                        'event_time': datetime.utcfromtimestamp(event.get('timestamp') / 1000),
-                        'user_identity': {},
-                        'ip_address': None,
-                        'resources': {
-                            'aws_region': resource_region,
-                            'resource_id': resource.get('resource_name'),
-                        },
-                        'raw_data': event,
-                        'extra_data': {},
-                    }
-                    normalized_log = NormalizedLog(**log_data)
-                    normalized_log.save()
-                    if isinstance(resource, AWSResource):
-                        normalized_log.aws_resources.add(resource)
-        except logs_client.exceptions.ResourceNotFoundException:
-            print(f"Log group {log_group_name} not found in region {resource_region}.")
-            continue
+            any_objects_found = True
+
+            for obj in contents:
+                key = obj["Key"]
+                try:
+                    resp = s3.get_object(Bucket=bucket_name, Key=key)
+                except Exception as e:
+                    print(f"DEBUG: Error fetching object '{key}' - {e}")
+                    continue
+
+                raw_body = resp["Body"].read()
+                # Decompress if .gz
+                if key.endswith(".gz"):
+                    try:
+                        file_data = gzip.decompress(raw_body).decode("utf-8")
+                    except OSError:
+                        print(f"DEBUG: Failed to decompress '{key}'. Skipping.")
+                        continue
+                else:
+                    file_data = raw_body.decode("utf-8")
+
+                # Parse CloudTrail JSON
+                try:
+                    records_json = json.loads(file_data)
+                    records = records_json.get("Records", [])
+                except json.JSONDecodeError:
+                    print(f"DEBUG: JSON decode error in '{key}'. Skipping.")
+                    continue
+
+                print(f"DEBUG: Found {len(records)} log records in file '{key}'")
+                for record in records:
+                    NormalizedLog.objects.create(
+                        case_id=case_id,
+                        log_id=record.get("eventID", ""),
+                        log_source="aws",
+                        log_type="CloudTrail",
+                        event_name=record.get("eventName", ""),
+                        event_time=record.get("eventTime", timezone.now()),
+                        user_identity=record.get("userIdentity", {}),
+                        ip_address=record.get("sourceIPAddress"),
+                        resources=record.get("resources", []),
+                        raw_data=record,
+                    )
+
+        if not any_objects_found:
+            print(f"DEBUG: No objects found at all for prefix '{final_prefix}'")
+
+        current_date += datetime.timedelta(days=1)
+
+    print("DEBUG: Finished fetching logs.")
 
 def fetch_management_event_history(account_id, case_id):
 
@@ -455,3 +472,5 @@ def fetch_management_event_history(account_id, case_id):
                     aws_resource = AWSResource.objects.filter(resource_name=resource.get('ResourceName')).first()
                     if aws_resource:
                         normalized_log.aws_resources.add(aws_resource)
+
+

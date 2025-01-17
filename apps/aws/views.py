@@ -2,16 +2,15 @@ import boto3
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from .models import AWSAccount, AWSResource, AWSLogSource
-from .forms import AWSAccountForm
+from .forms import AWSAccountForm, FetchCloudTrailLogsForm
 from apps.case.models import Case
-import boto3
 from .utils import validate_aws_credentials 
 from django.contrib import messages
-from .tasks import pull_aws_resources_task, pull_log_source_task
+from .tasks import pull_aws_resources_task, fetch_management_history_task, fetch_normalize_cloudtrail_logs_task
 from datetime import datetime
+from django.utils import timezone
 from django.http import JsonResponse
 from django.utils.timezone import make_aware
-from .tasks import fetch_and_normalize_logs_task, fetch_management_history_task
 
 import logging
 
@@ -79,7 +78,7 @@ def delete_account(request, account_id):
 #It calls a background worker to get the data (need to add progress bar)
 @login_required
 def pull_resources_view(request, account_id):
-    aws_account = get_object_or_404(AWSAccount, id=account_id)
+    aws_account = get_object_or_404(AWSAccount, account_id=account_id)
 
     if not aws_account.validated:
         messages.error(request, "Cannot pull resources because the AWS account credentials are not validated.")
@@ -99,22 +98,6 @@ def aws_resource_details(request, resource_id):
     """
     resource = get_object_or_404(AWSResource, id=resource_id)
     return render(request, 'aws/resource_details.html', {'resource': resource})
-
-#This is the trigger for getting the available logs of the AWS account.
-#It calls a background worker to get the data (need to add progress bar)
-@login_required
-def pull_log_source(request, account_id):
-    aws_account = get_object_or_404(AWSAccount, id=account_id)
-
-    if not aws_account.validated:
-        messages.error(request, "Cannot pull log sources because the AWS account credentials are not validated.")
-        return redirect('case:list_connected_accounts', slug=aws_account.case.slug)
-
-    # Trigger background task
-    pull_log_source_task.delay(account_id)
-    messages.info(request, "Discovering available log sources. This may take a few minutes.")
-
-    return redirect('case:list_connected_accounts', slug=aws_account.case.slug)
 
 # this renders both the aws resources and logging sources into one page
 @login_required
@@ -161,34 +144,61 @@ def aws_logsource_details(request, slug):
 
     return render(request, 'aws/logsource_details.html', context)
 
+# This allows a user to pull CloudTrail logs that are stored in an s3 bucket. 
+@login_required
+def browse_s3_structure(request):
+    resource_id = request.GET.get("resource_id")
+    current_prefix = request.GET.get("current_prefix", "")
+    resource = get_object_or_404(AWSResource, id=resource_id)
+    account = resource.account
+
+    session = boto3.Session(
+        aws_access_key_id=account.aws_access_key,
+        aws_secret_access_key=account.aws_secret_key,
+        region_name=resource.aws_region or account.default_region)
+    s3 = session.client("s3")
+    bucket_name = resource.resource_name or resource.resource_id
+
+    if current_prefix and not current_prefix.endswith("/"):
+        current_prefix += "/"
+
+    paginator   = s3.get_paginator("list_objects_v2")
+    subfolders  = []
+    for page in paginator.paginate(Bucket=bucket_name, Prefix=current_prefix, Delimiter="/"):
+        for cp in page.get("CommonPrefixes", []):
+            subfolders.append(cp["Prefix"])
+
+    return JsonResponse({"subfolders": subfolders})
 
 @login_required
-def trigger_log_fetch(request, account_id):
+def fetch_cloudtrail_logs(request, account_id):
     aws_account = get_object_or_404(AWSAccount, account_id=account_id)
+    if request.method == "POST":
+        form = FetchCloudTrailLogsForm(request.POST)
+        if form.is_valid():
+            resource = form.cleaned_data["resource"]
+            prefix = form.cleaned_data["prefix"]
+            start_date = form.cleaned_data["start_date"]
+            end_date = form.cleaned_data["end_date"]
 
-    if request.method == 'POST':
-        # Parse datetime from form submission
-        start_time = make_aware(datetime.strptime(request.POST.get('start_time'), '%Y-%m-%dT%H:%M'))
-        end_time = make_aware(datetime.strptime(request.POST.get('end_time'), '%Y-%m-%dT%H:%M'))
+            if resource.account.account_id != aws_account.account_id:
+                messages.error(request, "Selected bucket is not linked to this AWS account.")
+                return redirect("case:list_connected_accounts", slug=resource.case.slug)
 
-        # Get selected resources or all resources for the account
-        resource_ids = request.POST.getlist('resource_ids', None)
-        if not resource_ids:
-            resources = AWSResource.objects.filter(account=aws_account)
-            resource_ids = list(resources.values_list('id', flat=True))
+            fetch_normalize_cloudtrail_logs_task.delay(
+                account_id=aws_account.account_id,
+                resource_id=resource.id,
+                prefix=prefix or "",
+                start_date=str(start_date),
+                end_date=str(end_date),
+                case_id=resource.case.id
+            )
+            messages.success(request, "CloudTrail log fetching has been queued.")
+            return redirect("case:list_connected_accounts", slug=resource.case.slug)
+    else:
+        form = FetchCloudTrailLogsForm()
 
-        # Trigger background task
-        fetch_and_normalize_logs_task.delay(account_id, aws_account.case.id, start_time, end_time, resource_ids)
-
-        # Add success message
-        messages.success(request, "Logs are being gathered. You will be notified once the process is complete.")
-
-        # Redirect to the list of connected accounts
-        return redirect('case:list_connected_accounts', slug=aws_account.case.slug)
-
-    # Render the form for GET requests
-    resources = AWSResource.objects.filter(account=aws_account)
-    return render(request, 'aws/trigger_log_fetch.html', {'aws_account': aws_account, 'resources': resources})
+    return render(request, "aws/fetch_cloudtrail_logs.html", {"form": form, "account_id": account_id})
 
 @login_required
 def trigger_management_event_fetch(request, account_id):

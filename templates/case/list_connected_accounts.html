@@ -54,14 +54,11 @@
                             onclick="if(confirm('Are you sure you want to delete this account? This action cannot be undone.')) { window.location.href='{% url 'aws:delete_account' account.id %}'; }">
                             Delete
                         </button>
-                        <a href="{% url 'aws:pull_aws_resources' account.id %}" class="btn btn-primary btn-sm">
+                        <a href="{% url 'aws:pull_aws_resources' account.account_id %}" class="btn btn-primary btn-sm">
                             Pull Resources
                         </a>
-                        <a href="{% url 'aws:pull_log_source' account.id %}" class="btn btn-primary btn-sm">
-                            Find Logging
-                        </a>
-                        <a href="{% url 'aws:trigger_log_fetch' account.account_id %}" class="btn btn-primary btn-sm">
-                            Get Logs
+                        <a href="{% url 'aws:fetch_cloudtrail_logs' account.account_id %}" class="btn btn-primary btn-sm">
+                            Get CloudTrail Logs
                         </a>
                         <a href="{% url 'aws:fetch_management_events' account.account_id %}" class="btn btn-primary btn-sm">
                             Get Management Logs (90 days)
