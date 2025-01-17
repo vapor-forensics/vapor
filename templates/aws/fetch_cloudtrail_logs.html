@@ -1,0 +1,108 @@
+{% extends "web/app/app_base.html" %}
+{% load i18n %}
+{% load static %}
+{% block app %}
+<div class="container my-4">
+  <div class="row">
+    <div class="col-md-6">
+      <h4>Select S3 Bucket & Date Range (Account: {{ account_id }})</h4>
+      <form method="POST" class="card p-3 shadow-sm">
+        {% csrf_token %}
+        <div class="mb-3">
+          {{ form.resource.label_tag }}
+          {{ form.resource }}
+        </div>
+
+        <div class="mb-3">
+          {{ form.prefix.label_tag }}
+          {{ form.prefix }}
+          <small class="form-text text-muted">{{ form.prefix.help_text }}</small>
+        </div>
+
+        <div class="row">
+          <div class="col-md-6 mb-3">
+            {{ form.start_date.label_tag }}
+            {{ form.start_date }}
+          </div>
+          <div class="col-md-6 mb-3">
+            {{ form.end_date.label_tag }}
+            {{ form.end_date }}
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary">Queue Fetch</button>
+      </form>
+    </div>
+
+    <div class="col-md-6">
+      <h4>Browse Bucket Structure</h4>
+      <div class="card p-3 shadow-sm" id="explorer-container">
+        <p>Select a bucket on the left, then click "Load Root" to see subfolders.</p>
+        <button class="btn btn-secondary mb-3" id="load-root-btn">Load Root</button>
+        <div id="subfolder-list"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/htmx.org@1.9.2"></script>
+<script>
+  const resourceSelect = document.getElementById("id_resource");
+  const prefixInput = document.getElementById("id_prefix");
+  const loadRootBtn = document.getElementById("load-root-btn");
+  const subfolderList = document.getElementById("subfolder-list");
+
+  function loadSubfolders(currentPrefix) {
+    const resourceId = resourceSelect.value;
+    if (!resourceId) {
+      alert("Please select a bucket first!");
+      return;
+    }
+    fetch(`{% url 'aws:browse_s3_structure' %}?resource_id=${resourceId}&current_prefix=${currentPrefix || ''}`, {
+      headers: { "X-Requested-With": "XMLHttpRequest" }
+    })
+    .then(response => response.json())
+    .then(data => {
+      const subfolders = data.subfolders || [];
+      let html = "";
+
+      if (currentPrefix) {
+        // Offer a button to use the current prefix
+        html += `
+          <div class="mb-2">
+            <button class="btn btn-sm btn-success" onclick="setPrefix('${currentPrefix}')">
+              Use This Prefix
+            </button>
+          </div>
+        `;
+      }
+
+      if (subfolders.length === 0) {
+        html += "<p>No subfolders found.</p>";
+      } else {
+        subfolders.forEach(sf => {
+          const escapedSf = sf.replace(/'/g, "\\'");
+          html += `
+            <div>
+              <button class="btn btn-link p-0" onclick="loadSubfolders('${escapedSf}')">
+                ${sf}
+              </button>
+            </div>
+          `;
+        });
+      }
+      subfolderList.innerHTML = html;
+    })
+    .catch(err => console.error(err));
+  }
+
+  function setPrefix(prefixValue) {
+    prefixInput.value = prefixValue;
+    alert("Prefix set to: " + prefixValue);
+  }
+
+  loadRootBtn.addEventListener("click", () => {
+    loadSubfolders("");
+  });
+</script>
+{% endblock %}

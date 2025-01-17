@@ -15,5 +15,4 @@ urlpatterns = [
     path("404/", TemplateView.as_view(template_name="404.html"), name="404"),
     path("500/", TemplateView.as_view(template_name="500.html"), name="500"),
     path("simulate_error/", views.simulate_error),
-    path("health/", views.HealthCheck.as_view(), name="health_check"),
 ]

@@ -25,7 +25,7 @@ class AWSResource(models.Model):
     resource_type = models.CharField(max_length=100)
     resource_name = models.CharField(max_length=200, blank=True, null=True)
     resource_details = models.JSONField(blank=True, null=True)
-    aws_region = models.CharField(max_length=50, default="us-east-1")
+    aws_region = models.CharField(max_length=50, blank=True, null=True)
     slug = models.SlugField(max_length=255, unique=True, blank=True)
     discovered_at = models.DateTimeField(auto_now_add=True)
 
@@ -44,3 +44,27 @@ class AWSResource(models.Model):
         return f"{self.resource_type} - {self.resource_name or self.resource_id} for Account {self.account.account_id}"
 
 
+class AWSLogSource(models.Model):
+    account = models.ForeignKey('AWSAccount', on_delete=models.CASCADE, related_name='log_sources')
+    case = models.ForeignKey(Case, on_delete=models.CASCADE, related_name='aws_log_sources')
+    service_name = models.CharField(max_length=100)
+    log_name = models.CharField(max_length=255)
+    log_details = models.JSONField(blank=True, null=True)
+    status = models.CharField(max_length=50)
+    aws_region = models.CharField(max_length=50, blank=True, null=True)
+    slug = models.SlugField(max_length=255, unique=True, blank=True)
+    discovered_at = models.DateTimeField(auto_now_add=True)
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            base_slug = slugify(f"{self.service_name}-{self.log_name}")
+            unique_slug = base_slug
+            num = 1
+            while AWSResource.objects.filter(slug=unique_slug).exists():
+                unique_slug = f"{base_slug}-{num}"
+                num += 1
+            self.slug = unique_slug
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.service_name} - {self.log_name or self.status} for Account {self.account.account_id}"

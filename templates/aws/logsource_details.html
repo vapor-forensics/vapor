@@ -3,20 +3,21 @@
 {% load static %}
 {% block app %}
 <div class="container p-6">
-    <h1 class="fs-4 fw-bold mb-4">Resource Details</h1>
+    <h1 class="fs-4 fw-bold mb-4">Log Source Details</h1>
 
-    <!-- Resource Information -->
+    <!-- Log Source Information -->
     <div class="bg-white rounded shadow-sm p-4">
-        <h2 class="fs-5 fw-semibold text-dark">{{ resource.resource_name|default:resource.resource_id }}</h2>
-        <p class="small text-muted"><strong>Resource Type:</strong> {{ resource.resource_type }}</p>
-        <p class="small text-muted"><strong>Region:</strong> {{ resource.aws_region }}</p>
+        <h2 class="fs-5 fw-semibold text-dark">{{ log_source.log_name }}</h2>
+        <p class="small text-muted"><strong>Service Name:</strong> {{ log_source.service_name }}</p>
+        <p class="small text-muted"><strong>Status:</strong> {{ log_source.status }}</p>
+        <p class="small text-muted"><strong>Region:</strong> {{ log_source.aws_region|default:"Global" }}</p>
     </div>
 
-    <!-- Resource Details Section -->
+    <!-- Log Source Details Section -->
     <div class="mt-4">
-        <h3 class="fs-6 fw-medium text-dark">Resource Details</h3>
+        <h3 class="fs-6 fw-medium text-dark">Log Source Details</h3>
         <ul class="list-unstyled mt-2">
-            {% for key, value in resource.resource_details.items %}
+            {% for key, value in log_source.log_details.items %}
             <li class="d-flex">
                 <strong class="text-dark me-2" style="min-width: 150px;">{{ key }}:</strong>
                 <span>

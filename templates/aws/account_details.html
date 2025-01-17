@@ -1,0 +1,73 @@
+{% extends "web/app/app_base.html" %}
+{% load i18n %}
+{% load static %}
+
+{% block app %}
+<div class="container p-6">
+    <!-- Page Header -->
+    <h1 class="fs-3 fw-bold mb-4">Account Details for: {{ aws_account.account_id }}</h1>
+
+    <!-- AWS Resources Section -->
+    <section class="mb-6">
+        <h2 class="fs-4 fw-bold text-primary mb-4">AWS Resources</h2>
+
+        {% for resource_type, resources in grouped_resources.items %}
+        <div class="mb-5">
+            <h3 class="fs-5 fw-semibold text-dark mb-3 border-bottom pb-2">{{ resource_type }}</h3>
+
+            <div class="row g-4">
+                {% for resource in resources %}
+                <div class="col-12 col-sm-6 col-lg-4">
+                    <div class="card shadow-sm border">
+                        <div class="card-body">
+                            <h4 class="h6 fw-bold text-break mb-2">
+                                {{ resource.resource_name|default:resource.resource_id }}
+                            </h4>
+                            <p class="text-muted small mb-3">Region: {{ resource.aws_region }}</p>
+                            <a href="{% url 'aws:aws_resource_details' resource.id %}" 
+                               target="_blank" 
+                               class="text-primary text-decoration-underline small fw-medium">
+                                View Details
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endfor %}
+    </section>
+
+    <!-- AWS Log Sources Section -->
+    <section>
+        <h2 class="fs-4 fw-bold text-primary mb-4">AWS Log Sources</h2>
+
+        {% for message in error_messages %}
+        <div class="alert alert-danger">{{ message }}</div>
+        {% endfor %}
+
+        {% for service_name, log_sources in grouped_log_sources.items %}
+        <div class="mb-5">
+            <h3 class="fs-5 fw-semibold text-dark mb-3 border-bottom pb-2">{{ service_name }}</h3>
+
+            <div class="row g-4">
+                {% for log_source in log_sources %}
+                <div class="col-12 col-sm-6 col-lg-4">
+                    <div class="card shadow-sm border">
+                        <div class="card-body">
+                            <h4 class="h6 fw-bold text-break mb-2">{{ log_source.log_name }}</h4>
+                            <p class="text-muted small mb-3">Region: {{ log_source.aws_region|default:"Global" }}</p>
+                            <p class="text-muted small mb-3">Status: {{ log_source.status }}</p>
+                            <a href="{% url 'aws:aws_logsource_details' log_source.slug %}" class="text-primary text-decoration-underline small fw-medium">
+                                View Details
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endfor %}
+    </section>
+</div>
+{% endblock %}
