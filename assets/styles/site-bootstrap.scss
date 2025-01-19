@@ -62,6 +62,6 @@ $body-bg: hsl(0, 0%, 98%);
   --gray: #{$gray-500};
 }
 
-// Pegasus
+// Scope
 @import "app/bootstrap/_all";
-@import "pegasus/bootstrap";
+@import "scope/bootstrap";
