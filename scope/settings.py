@@ -237,21 +237,6 @@ AUTHENTICATION_BACKENDS = (
     "allauth.account.auth_backends.AuthenticationBackend",
 )
 
-# enable social login
-SOCIALACCOUNT_PROVIDERS = {
-    "github": {
-        "APPS": [
-            {
-                "client_id": env("GITHUB_CLIENT_ID", default=""),
-                "secret": env("GITHUB_SECRET_ID", default=""),
-                "key": "",
-            },
-        ],
-        "SCOPE": [
-            "user",
-        ],
-    },
-}
 
 # For turnstile captchas
 TURNSTILE_KEY = env("TURNSTILE_KEY", default=None)

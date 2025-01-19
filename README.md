@@ -10,7 +10,7 @@ Current status: Under rapid development - The initial version will be released s
 
 ## Installation - Docker
 
-The easiest way to get up and running is with [Docker](https://www.docker.com/).
+The easiest way to get Scope up and running is with [Docker](https://www.docker.com/).
 
 Just [install Docker](https://www.docker.com/get-started) and
 [Docker Compose](https://docs.docker.com/compose/install/)
@@ -22,7 +22,7 @@ make init
 
 This will spin up a database, web worker, celery worker, and Redis broker and run your migrations.
 
-You can then go to [localhost:8000](http://localhost:8000/) to view the app.
+You can then go to [localhost:8000](http://localhost:8000/) to view your local installation of Scope.
 
 *Note: if you get an error, make sure you have a `.env` file, or create one based on `.env.example`.*
 
@@ -40,7 +40,7 @@ docker compose exec web python manage.py createsuperuser
 
 ## Installation - Native
 
-You can also install/run the app directly on your OS using the instructions below.
+You can also install/run Scope directly on your OS using the instructions below.
 Setup a virtualenv and install requirements
 (this example uses [virtualenvwrapper](https://virtualenvwrapper.readthedocs.io/en/latest/)):
 
@@ -71,7 +71,7 @@ Create database tables:
 python manage.py migrate
 ```
 
-## Running server
+## Running the Scope server
 
 **Docker:**
 
@@ -117,10 +117,10 @@ npm run dev-watch
 
 ## Running Celery
 
-Celery can be used to run background tasks.
+Celery is used to run background tasks and pull large amounts of data while your working with Scope.
 If you use Docker it will start automatically.
 
-You can run it using:
+If you're not using Docker, you can run it using:
 
 ```bash
 celery -A scope worker -l INFO --pool=solo
@@ -134,9 +134,6 @@ celery -A scope worker -l INFO -B --pool=solo
 
 Note: Using the `solo` pool is recommended for development but not for production.
 
-## Github Authentication Setup
-
-To setup Github Authentication, follow the [instructions here](https://docs.allauth.org/en/latest/socialaccount/providers/github.html).
 
 ## Installing Git commit hooks
 
