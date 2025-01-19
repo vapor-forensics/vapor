@@ -1,7 +1,7 @@
 /* tslint:disable */
 /* eslint-disable */
 /**
- * Vapor
+ * scope
  * Open Source Cloud Forensics
  *
  * The version of the OpenAPI document: 0.1.0

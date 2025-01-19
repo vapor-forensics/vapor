@@ -6,8 +6,8 @@
 db.sqlite3
 .sass-cache/
 celerybeat-schedule
-vapor/localsettings.py
-vapor/local.py
+scope/localsettings.py
+scope/local.py
 static_root/
 node_modules/
 openapitools.json

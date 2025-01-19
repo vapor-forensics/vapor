@@ -5,7 +5,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data/
     environment:
-      - POSTGRES_DB=vapor
+      - POSTGRES_DB=scope
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
     healthcheck:
@@ -46,7 +46,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.dev
-    command: celery -A vapor worker -l INFO --beat --pool=solo
+    command: celery -A scope worker -l INFO --beat --pool=solo
     volumes:
       - .:/code
     environment:

@@ -42,5 +42,5 @@ USE_HTTPS_IN_ABSOLUTE_URLS = True
 # }
 
 ADMINS = [
-    ("Your Name", "vaporforensics@gmail.com"),
+    ("Your Name", "scopeforensics@gmail.com"),
 ]

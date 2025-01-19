@@ -17,7 +17,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-# This is used to add access to the aws account to be investigated and connect it to vapor.
+# This is used to add access to the aws account to be investigated and connect it to scope.
 @login_required
 def connect_aws(request, slug):
     case = get_object_or_404(Case, slug=slug)

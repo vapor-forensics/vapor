@@ -1,6 +1,6 @@
-# Vapor
+# scope
 
-Vapor is an open source Cloud Forensic tool for Amazon Web Service (AWS), Microsoft Azure and Google Cloud Platform (GCP).
+scope is an open source Cloud Forensic tool for Amazon Web Service (AWS), Microsoft Azure and Google Cloud Platform (GCP).
 
 Current status: Under rapid development - The initial version will be released soon.
 
@@ -45,7 +45,7 @@ Setup a virtualenv and install requirements
 (this example uses [virtualenvwrapper](https://virtualenvwrapper.readthedocs.io/en/latest/)):
 
 ```bash
-mkvirtualenv vapor -p python3.11
+mkvirtualenv scope -p python3.11
 pip install -r dev-requirements.txt
 ```
 
@@ -53,10 +53,10 @@ pip install -r dev-requirements.txt
 
 *If you are using Docker you can skip these steps.*
 
-Create a database named `vapor`.
+Create a database named `scope`.
 
 ```
-createdb vapor
+createdb scope
 ```
 
 Create database migrations:
@@ -123,13 +123,13 @@ If you use Docker it will start automatically.
 You can run it using:
 
 ```bash
-celery -A vapor worker -l INFO --pool=solo
+celery -A scope worker -l INFO --pool=solo
 ```
 
 Or with celery beat (for scheduled tasks):
 
 ```bash
-celery -A vapor worker -l INFO -B --pool=solo
+celery -A scope worker -l INFO -B --pool=solo
 ```
 
 Note: Using the `solo` pool is recommended for development but not for production.
