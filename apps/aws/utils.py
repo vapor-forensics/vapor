@@ -3,12 +3,17 @@ from .models import AWSResource, AWSLogSource, AWSAccount
 from apps.data.models import NormalizedLog
 from apps.case.models import Case
 from datetime import datetime, timedelta
-import datetime, gzip
+from django.utils import timezone
+import gzip
 from botocore.exceptions import EndpointConnectionError, ClientError
 import logging
 from django.db import transaction
-from django.utils import timezone
+from datetime import timezone
+from django.utils.timezone import make_aware
+from datetime import datetime, timezone
+
 import json
+
 
 
 logger = logging.getLogger(__name__)
@@ -339,98 +344,98 @@ def discover_log_sources(aws_account):
 # this function extracts logs from a s3 bucket based on the users selected prefix
 def fetch_and_normalize_cloudtrail_logs(account_id, resource_id, prefix, start_date, end_date, case_id):
     try:
-        account = AWSAccount.objects.get(account_id=account_id)
+        aws_account = AWSAccount.objects.get(account_id=account_id)
+        case = Case.objects.get(id=case_id)
         resource = AWSResource.objects.get(id=resource_id)
-    except (AWSAccount.DoesNotExist, AWSResource.DoesNotExist):
-        print("DEBUG: Account or Resource not found.")
+    except (AWSAccount.DoesNotExist, AWSResource.DoesNotExist, Case.DoesNotExist):
+        print("DEBUG: Account, Resource, or Case not found.")
         return
 
     session = boto3.Session(
-        aws_access_key_id=account.aws_access_key,
-        aws_secret_access_key=account.aws_secret_key,
-        region_name=resource.aws_region or account.default_region
+        aws_access_key_id=aws_account.aws_access_key,
+        aws_secret_access_key=aws_account.aws_secret_key,
+        region_name=resource.aws_region or aws_account.aws_region
     )
     s3 = session.client("s3")
     bucket_name = resource.resource_name or resource.resource_id
 
-    # Convert date strings to date objects
-    start_date_obj = datetime.datetime.strptime(start_date, "%Y-%m-%d").date()
-    end_date_obj   = datetime.datetime.strptime(end_date,   "%Y-%m-%d").date()
+    start_date_obj = datetime.strptime(start_date, "%Y-%m-%d").date()
+    end_date_obj = datetime.strptime(end_date, "%Y-%m-%d").date()
 
-    # Ensure prefix ends with '/'
     if prefix and not prefix.endswith("/"):
         prefix += "/"
 
     current_date = start_date_obj
-    while current_date <= end_date_obj:
-        date_folder = f"{current_date.year}/{current_date.strftime('%m')}/{current_date.strftime('%d')}/"
-        final_prefix = prefix + date_folder
-        
-        print(f"DEBUG: Checking prefix '{final_prefix}' in bucket '{bucket_name}'")
+    with transaction.atomic():
+        while current_date <= end_date_obj:
+            date_folder = f"{current_date.year}/{current_date.strftime('%m')}/{current_date.strftime('%d')}/"
+            final_prefix = prefix + date_folder
 
-        paginator = s3.get_paginator("list_objects_v2")
-        page_iterator = paginator.paginate(Bucket=bucket_name, Prefix=final_prefix)
+            print(f"DEBUG: Checking prefix '{final_prefix}' in bucket '{bucket_name}'")
 
-        any_objects_found = False
-        for page in page_iterator:
-            contents = page.get("Contents", [])
-            if not contents:
-                print(f"DEBUG: No objects in prefix '{final_prefix}' on this page.")
-                continue
+            paginator = s3.get_paginator("list_objects_v2")
+            page_iterator = paginator.paginate(Bucket=bucket_name, Prefix=final_prefix)
 
-            any_objects_found = True
-
-            for obj in contents:
-                key = obj["Key"]
-                try:
-                    resp = s3.get_object(Bucket=bucket_name, Key=key)
-                except Exception as e:
-                    print(f"DEBUG: Error fetching object '{key}' - {e}")
-                    continue
-
-                raw_body = resp["Body"].read()
-                # Decompress if .gz
-                if key.endswith(".gz"):
+            for page in page_iterator:
+                contents = page.get("Contents", [])
+                for obj in contents:
+                    key = obj["Key"]
                     try:
-                        file_data = gzip.decompress(raw_body).decode("utf-8")
-                    except OSError:
-                        print(f"DEBUG: Failed to decompress '{key}'. Skipping.")
+                        resp = s3.get_object(Bucket=bucket_name, Key=key)
+                    except Exception as e:
+                        print(f"DEBUG: Error fetching object '{key}' - {e}")
                         continue
-                else:
-                    file_data = raw_body.decode("utf-8")
 
-                # Parse CloudTrail JSON
-                try:
-                    records_json = json.loads(file_data)
-                    records = records_json.get("Records", [])
-                except json.JSONDecodeError:
-                    print(f"DEBUG: JSON decode error in '{key}'. Skipping.")
-                    continue
+                    raw_body = resp["Body"].read()
+                    if key.endswith(".gz"):
+                        try:
+                            file_data = gzip.decompress(raw_body).decode("utf-8")
+                        except OSError:
+                            print(f"DEBUG: Failed to decompress '{key}'. Skipping.")
+                            continue
+                    else:
+                        file_data = raw_body.decode("utf-8")
 
-                print(f"DEBUG: Found {len(records)} log records in file '{key}'")
-                for record in records:
-                    NormalizedLog.objects.create(
-                        case_id=case_id,
-                        log_id=record.get("eventID", ""),
-                        log_source="aws",
-                        log_type="CloudTrail",
-                        event_name=record.get("eventName", ""),
-                        event_time=record.get("eventTime", timezone.now()),
-                        user_identity=record.get("userIdentity", {}),
-                        ip_address=record.get("sourceIPAddress"),
-                        resources=record.get("resources", []),
-                        raw_data=record,
-                    )
+                    try:
+                        records_json = json.loads(file_data)
+                        records = records_json.get("Records", [])
+                    except json.JSONDecodeError:
+                        print(f"DEBUG: JSON decode error in '{key}'. Skipping.")
+                        continue
 
-        if not any_objects_found:
-            print(f"DEBUG: No objects found at all for prefix '{final_prefix}'")
+                    for record in records:
+                        try:
+                            raw_event = json.loads(json.dumps(record, default=str))
+                            event_time = raw_event.get('eventTime')
+                            if event_time:
+                                event_time = datetime.strptime(event_time, "%Y-%m-%dT%H:%M:%SZ")
+                                event_time = make_aware(event_time, timezone.utc)
 
-        current_date += datetime.timedelta(days=1)
+                            log_data = {
+                                'case': case,
+                                'log_id': raw_event.get('eventID'),
+                                'log_source': 'aws',
+                                'log_type': 'CloudTrail',
+                                'event_name': raw_event.get('eventName', 'Unknown'),
+                                'event_time': event_time,
+                                'user_identity': raw_event.get('userIdentity', {}).get('userName') or raw_event.get('userIdentity', {}).get('invokedBy', 'Unknown'),
+                                'ip_address': raw_event.get('sourceIPAddress', None),
+                                'resources': raw_event.get('resources', []),
+                                'raw_data': raw_event,
+                                'extra_data': {},
+                                'aws_account': aws_account,
+                            }
+
+                            NormalizedLog.objects.create(**log_data)
+                        except Exception as e:
+                            print(f"DEBUG: Error saving log for eventID {raw_event.get('eventID')}: {e}")
+                            continue
+
+            current_date += timedelta(days=1)
 
     print("DEBUG: Finished fetching logs.")
 
 def fetch_management_event_history(account_id, case_id):
-
     aws_account = AWSAccount.objects.get(account_id=account_id)
     case = Case.objects.get(id=case_id)
 
@@ -441,36 +446,51 @@ def fetch_management_event_history(account_id, case_id):
     )
     client = session.client('cloudtrail')
 
-    # Paginator for management event history
     paginator = client.get_paginator('lookup_events')
 
-    with transaction.atomic():
-        for page in paginator.paginate():
-            for event in page.get('Events', []):
-                # Ensure event data is JSON serializable
-                raw_event = json.loads(json.dumps(event, default=str))
+    for page in paginator.paginate():
+        for event in page.get('Events', []):
+            try:
+                # Handle event time: check if it's already a datetime object
+                event_time = event.get('EventTime')
+                if isinstance(event_time, str):
+                    event_time = datetime.strptime(event_time, "%Y-%m-%dT%H:%M:%SZ")
+                    event_time = make_aware(event_time, utc)
 
+                # Extract user identity or service name
+                user_identity_value = (
+                    event.get('Username') or
+                    event.get('userIdentity', {}).get('userName') or
+                    event.get('userIdentity', {}).get('invokedBy') or
+                    'Unknown'
+                )
+
+                # Extract IP address from CloudTrailEvent
+                cloudtrail_event = json.loads(event.get('CloudTrailEvent', '{}'))
+                ip_address = cloudtrail_event.get('sourceIPAddress', 'Unknown')
+
+                # Prepare log data
                 log_data = {
-                    'case_id': case_id,
-                    'log_id': raw_event.get('EventId'),
+                    'case': case,
+                    'log_id': event.get('EventId'),
                     'log_source': 'aws',
-                    'log_type': raw_event.get('EventSource'),
-                    'event_name': raw_event.get('EventName'),
-                    'event_time': raw_event.get('EventTime'),
-                    'user_identity': raw_event.get('Username', {}),
-                    'ip_address': raw_event.get('SourceIPAddress'),
-                    'resources': raw_event.get('Resources', []),
-                    'raw_data': raw_event,  # Ensure all fields are JSON serializable
-                    'extra_data': {},  # Add additional metadata if needed
+                    'log_type': event.get('EventSource', 'Unknown'),
+                    'event_name': event.get('EventName', 'Unknown'),
+                    'event_time': event_time,
+                    'user_identity': user_identity_value,
+                    'ip_address': ip_address,
+                    'resources': event.get('Resources', []),
+                    'raw_data': event,
+                    'extra_data': {},
+                    'aws_account': aws_account,
                 }
 
-                # Normalize and save the log
-                normalized_log = NormalizedLog.objects.create(**log_data)
+                # Save log
+                NormalizedLog.objects.create(**log_data)
 
-                # Link to resources if applicable
-                for resource in raw_event.get('Resources', []):
-                    aws_resource = AWSResource.objects.filter(resource_name=resource.get('ResourceName')).first()
-                    if aws_resource:
-                        normalized_log.aws_resources.add(aws_resource)
+            except Exception as e:
+                # Log the error and continue with the next event
+                print(f"DEBUG: Error saving event {event.get('EventId', 'Unknown')} - {e}")
+
 
 

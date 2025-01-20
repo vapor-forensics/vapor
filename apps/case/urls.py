@@ -10,6 +10,5 @@ urlpatterns = [
     path('<slug:slug>/', views.case_detail, name='case_detail'),
     path('<slug:slug>/edit/', views.edit_case, name='edit_case'),
     path('<slug:slug>/connect/', views.connect_client, name='connect_client'),
-    path('<slug:slug>/connected-accounts/', views.list_connected_accounts, name='list_connected_accounts'),
 ]
 

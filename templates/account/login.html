@@ -12,8 +12,7 @@
         {% render_text_input form.login %}
         {% render_text_input form.password %}
         <input class="btn btn-primary w-100" type="submit" value="{% translate "Sign In" %}">
-      </form>
-      {% include 'account/components/social/social_buttons.html' %}
+      </form>}
       {% if LOGIN_BY_CODE_ENABLED %}
       <p class="pg-text-centered pg-text-muted">
         <a class="text-sm muted-link" href="{{ request_login_code_url }}">
