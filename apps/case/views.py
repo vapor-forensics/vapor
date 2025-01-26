@@ -23,8 +23,21 @@ def create_case(request):
 # This is used to view the details of a case
 @login_required
 def case_detail(request, slug):
-    case = Case.objects.get(slug=slug)
-    return render(request, "case/case_detail.html", {"case": case})
+    case = get_object_or_404(Case, slug=slug)
+
+    # AWS accounts linked to the case
+    aws_accounts = AWSAccount.objects.filter(case=case)
+
+    # Add GCP and Azure placeholders
+    gcp_placeholder = True
+    azure_placeholder = True
+
+    return render(request, "case/case_detail.html", {
+        "case": case,
+        "aws_accounts": aws_accounts,
+        "gcp_placeholder": gcp_placeholder,
+        "azure_placeholder": azure_placeholder,
+    })
 
 # this is used to edit the details of a case
 @login_required
@@ -50,20 +63,3 @@ def edit_case(request, slug):
 def connect_client(request, slug):
     case = get_object_or_404(Case, slug=slug)
     return render(request, 'case/connect_client.html', {'case': case})
-
-@login_required
-def list_connected_accounts(request, slug):
-    case = get_object_or_404(Case, slug=slug)
-
-    # AWS accounts linked to the case
-    aws_accounts = AWSAccount.objects.filter(case=case)  
-
-    # Add GCP and azure later
-
-    return render(request, 'case/list_connected_accounts.html', {
-        'case': case,
-        'aws_accounts': aws_accounts,
-        # GCP and Azure placeholders
-        'gcp_placeholder': True,
-        'azure_placeholder': True,
-    })

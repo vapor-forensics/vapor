@@ -1,0 +1,118 @@
+{% extends "web/app/app_base.html" %}
+{% load i18n %}
+{% load static %}
+
+{% block app %}
+<section class="app-card p-4">
+    <!-- Breadcrumb Navigation -->
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item">
+                <a href="{% url 'web:home' %}" class="text-primary text-decoration-underline">Dashboard</a>
+            </li>
+            <li class="breadcrumb-item">
+                <a href="{% url 'case:case_detail' slug=aws_account.case.slug %}" class="text-primary text-decoration-underline">
+                    {{ aws_account.case.name }}
+                </a>
+            </li>
+            <li class="breadcrumb-item active" aria-current="page">Logs</li>
+        </ol>
+    </nav>
+
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="fs-3 fw-bold">Logs for Account: {{ aws_account.account_id }}</h1>
+        <div>
+            <a href="{% url 'aws:fetch_cloudtrail_logs' aws_account.account_id %}" class="btn btn-primary btn-sm">
+                Get CloudTrail Logs
+            </a>
+            <a href="{% url 'aws:fetch_management_events' aws_account.account_id %}" class="btn btn-primary btn-sm">
+                Get Management Logs (90 days)
+            </a>
+        </div>
+    </div>
+
+    <!-- Date Filter -->
+    <form method="get" class="mb-4">
+        <div class="row">
+            <div class="col-md-4">
+                <label for="start_date" class="form-label">Start Date</label>
+                <input type="date" id="start_date" name="start_date" class="form-control" value="{{ start_date }}">
+            </div>
+            <div class="col-md-4">
+                <label for="end_date" class="form-label">End Date</label>
+                <input type="date" id="end_date" name="end_date" class="form-control" value="{{ end_date }}">
+            </div>
+            <div class="col-md-4 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary w-100">Filter</button>
+            </div>
+        </div>
+    </form>
+
+    <!-- Top 10 Stats -->
+    <div class="row g-4">
+        <!-- Top 10 Users -->
+        <div class="col-md-4">
+            <div class="card shadow-sm border">
+                <div class="card-body">
+                    <h4 class="fs-5 fw-bold mb-3">Top 10 Users</h4>
+                    <ul class="list-group">
+                        {% for user in top_users %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            {{ user.user_identity|default:"Unknown User" }}
+                            <span class="badge bg-primary">{{ user.count }}</span>
+                        </li>
+                        {% empty %}
+                        <li class="list-group-item text-muted text-center">
+                            No users found.
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Top 10 IPs -->
+        <div class="col-md-4">
+            <div class="card shadow-sm border">
+                <div class="card-body">
+                    <h4 class="fs-5 fw-bold mb-3">Top 10 IPs</h4>
+                    <ul class="list-group">
+                        {% for ip in top_ips %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            {{ ip.ip_address|default:"Unknown IP" }}
+                            <span class="badge bg-primary">{{ ip.count }}</span>
+                        </li>
+                        {% empty %}
+                        <li class="list-group-item text-muted text-center">
+                            No IPs found.
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Top 10 Events -->
+        <div class="col-md-4">
+            <div class="card shadow-sm border">
+                <div class="card-body">
+                    <h4 class="fs-5 fw-bold mb-3">Top 10 Events</h4>
+                    <ul class="list-group">
+                        {% for event in top_events %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            {{ event.event_name|default:"Unknown Event" }}
+                            <span class="badge bg-primary">{{ event.count }}</span>
+                        </li>
+                        {% empty %}
+                        <li class="list-group-item text-muted text-center">
+                            No events found.
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
