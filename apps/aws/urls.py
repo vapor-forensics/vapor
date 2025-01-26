@@ -17,6 +17,6 @@ urlpatterns = [
     path('browse-s3-structure/', views.browse_s3_structure, name='browse_s3_structure'),
     path('fetch-logs/<int:account_id>/', views.fetch_cloudtrail_logs, name='fetch_cloudtrail_logs'),
     path('accounts/<int:account_id>/logs/', views.normalized_logs_view, name='normalized_logs'),
-
+    path('credential/<slug:slug>/', views.aws_credential_details, name='aws_credential_details'),
 ]
 

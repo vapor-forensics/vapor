@@ -25,7 +25,7 @@
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h1 class="fs-3 fw-bold">Account Details for: {{ aws_account.account_id }}</h1>
         <a href="{% url 'aws:pull_aws_resources' aws_account.account_id %}" class="btn btn-primary btn-sm">
-            Pull Resources
+            Generate Overview
         </a>
     </div>
 
@@ -63,7 +63,7 @@
         <div class="text-center my-5">
             <p class="text-muted">No resources found. Would you like to pull resources?</p>
             <a href="{% url 'aws:pull_aws_resources' aws_account.account_id %}" class="btn btn-primary">
-                Pull Resources
+                Generate Overview
             </a>
         </div>
         {% endif %}
@@ -106,5 +106,97 @@
         </div>
         {% endif %}
     </section>
+
+    <!-- Add this section after the other resource sections -->
+
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">
+                <button class="btn btn-link" type="button" data-bs-toggle="collapse" data-bs-target="#credentialsCollapse">
+                    IAM Credentials
+                </button>
+            </h5>
+        </div>
+        <div id="credentialsCollapse" class="collapse show">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Username</th>
+                                <th>Created</th>
+                                <th>Password Enabled</th>
+                                <th>MFA Active</th>
+                                <th>Access Key 1</th>
+                                <th>Access Key 2</th>
+                                <th>Last Activity</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for credential in aws_credentials %}
+                            <tr>
+                                <td>
+                                    <a href="{% url 'aws:aws_credential_details' slug=credential.slug %}" target="_blank" 
+                                       class="text-primary text-decoration-underline">
+                                        {{ credential.user }}
+                                    </a>
+                                </td>
+                                <td>{{ credential.user_creation_time|default:"N/A" }}</td>
+                                <td>
+                                    {% if credential.password_enabled %}
+                                        <span class="badge bg-success">Yes</span>
+                                    {% else %}
+                                        <span class="badge bg-danger">No</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if credential.mfa_active %}
+                                        <span class="badge bg-success">Yes</span>
+                                    {% else %}
+                                        <span class="badge bg-danger">No</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if credential.access_key_1_active %}
+                                        <span class="badge bg-success">Active</span>
+                                        {% if credential.access_key_1_last_used_date %}
+                                        <br><small>Last used: {{ credential.access_key_1_last_used_date|date }}</small>
+                                        {% endif %}
+                                    {% else %}
+                                        <span class="badge bg-secondary">Inactive</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if credential.access_key_2_active %}
+                                        <span class="badge bg-success">Active</span>
+                                        {% if credential.access_key_2_last_used_date %}
+                                        <br><small>Last used: {{ credential.access_key_2_last_used_date|date }}</small>
+                                        {% endif %}
+                                    {% else %}
+                                        <span class="badge bg-secondary">Inactive</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if credential.password_last_used %}
+                                        Password: {{ credential.password_last_used|date }}<br>
+                                    {% endif %}
+                                    {% if credential.access_key_1_last_used_date or credential.access_key_2_last_used_date %}
+                                        {% with last_key_use=credential.access_key_1_last_used_date|default:credential.access_key_2_last_used_date %}
+                                        Access Key: {{ last_key_use|date }}
+                                        {% endwith %}
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="7" class="text-center">No credentials found</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
 </section>
 {% endblock %}

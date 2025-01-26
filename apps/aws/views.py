@@ -1,7 +1,7 @@
 import boto3
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
-from .models import AWSAccount, AWSResource, AWSLogSource
+from .models import AWSAccount, AWSResource, AWSLogSource, AWSCredential
 from .forms import AWSAccountForm, FetchCloudTrailLogsForm
 from apps.case.models import Case
 from .utils import validate_aws_credentials 
@@ -128,12 +128,15 @@ def account_resources(request, account_id):
     if not log_sources.exists():
         error_messages.append("No AWS log sources found for this account.")
 
+    aws_credentials = AWSCredential.objects.filter(account=aws_account)
+    
     context = {
         'aws_account': aws_account,
         'case': case,
         'grouped_resources': grouped_resources,
         'grouped_log_sources': grouped_log_sources,
         'error_messages': error_messages,
+        'aws_credentials': aws_credentials,
     }
     return render(request, 'aws/account_resources.html', context)
 
@@ -258,4 +261,19 @@ def trigger_management_event_fetch(request, account_id):
     logger.info(f"Task queued for AWS account {account_id}")
 
     return redirect("aws:normalized_logs", account_id=aws_account.account_id)
+
+@login_required
+def aws_credential_details(request, slug):
+    """
+    Display detailed information for a specific IAM credential.
+    """
+    credential = get_object_or_404(AWSCredential, slug=slug)
+    
+    context = {
+        'credential': credential,
+        'case': credential.case,
+        'aws_account': credential.account,
+    }
+    
+    return render(request, 'aws/credential_details.html', context)
 

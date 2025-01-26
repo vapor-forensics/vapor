@@ -1,5 +1,5 @@
 import boto3
-from .models import AWSResource, AWSLogSource, AWSAccount
+from .models import AWSResource, AWSLogSource, AWSAccount, AWSCredential
 from apps.data.models import NormalizedLog
 from apps.case.models import Case
 from datetime import datetime, timedelta
@@ -11,12 +11,21 @@ from django.db import transaction
 from datetime import timezone
 from django.utils.timezone import make_aware
 from datetime import datetime, timezone
-
+import time
 import json
-
-
+import ipaddress
 
 logger = logging.getLogger(__name__)
+
+def parse_aws_datetime(datetime_str):
+    if datetime_str and datetime_str not in ['N/A', 'not_supported']:
+        try:
+            dt = datetime.strptime(datetime_str, '%Y-%m-%dT%H:%M:%SZ')
+            return make_aware(dt, timezone.utc)
+        except ValueError:
+            logger.debug(f"Could not parse datetime: {datetime_str}")
+            return None
+    return None
 
 # Validate AWS credentials by calling the STS GetCallerIdentity API.
 def validate_aws_credentials(aws_access_key, aws_secret_key, region):
@@ -50,6 +59,82 @@ def pull_aws_resources(aws_account):
         aws_access_key_id=aws_account.aws_access_key,
         aws_secret_access_key=aws_account.aws_secret_key
     )
+
+    # Add new function to fetch IAM credential report
+    def fetch_credential_report():
+        try:
+            iam = session.client('iam')
+            
+            # Generate credential report - this may take a few seconds
+            response = iam.generate_credential_report()
+            
+            # Wait for report to be generated
+            state = response.get('State', '')
+            while state != 'COMPLETE':
+                logger.info(f"Waiting for credential report to be generated... Current state: {state}")
+                time.sleep(2)
+                try:
+                    response = iam.get_credential_report()
+                    state = response.get('State', '')
+                except iam.exceptions.CredentialReportNotPresentException:
+                    logger.info("Report not ready yet, retrying...")
+                    continue
+            
+            # Get the credential report
+            response = iam.get_credential_report()
+            if 'Content' not in response:
+                logger.error("No content in credential report response")
+                return
+            
+            report_csv = response['Content'].decode('utf-8')
+            
+            # Parse CSV content
+            report_lines = report_csv.split('\n')
+            headers = report_lines[0].split(',')
+            
+            # Process each user's credentials
+            for line in report_lines[1:]:
+                if not line:
+                    continue
+                    
+                user_data = dict(zip(headers, line.split(',')))
+                
+                # Create or update AWSCredential record
+                AWSCredential.objects.update_or_create(
+                    account=aws_account,
+                    case=aws_account.case,
+                    user=user_data['user'],
+                    defaults={
+                        'user_arn': user_data.get('arn', ''),
+                        'user_creation_time': parse_aws_datetime(user_data.get('user_creation_time')),
+                        'password_enabled': user_data.get('password_enabled', 'false').lower() == 'true',
+                        'password_last_used': parse_aws_datetime(user_data.get('password_last_used')),
+                        'password_last_changed': parse_aws_datetime(user_data.get('password_last_changed')),
+                        'password_next_rotation_date': parse_aws_datetime(user_data.get('password_next_rotation')),
+                        'mfa_active': user_data.get('mfa_active', 'false').lower() == 'true',
+                        'access_key_1_active': user_data.get('access_key_1_active', 'false').lower() == 'true',
+                        'access_key_1_last_rotated': parse_aws_datetime(user_data.get('access_key_1_last_rotated')),
+                        'access_key_1_last_used_date': parse_aws_datetime(user_data.get('access_key_1_last_used_date')),
+                        'access_key_1_last_used_region': user_data.get('access_key_1_last_used_region', ''),
+                        'access_key_1_last_used_service': user_data.get('access_key_1_last_used_service', ''),
+                        'access_key_2_active': user_data.get('access_key_2_active', 'false').lower() == 'true',
+                        'access_key_2_last_rotated': parse_aws_datetime(user_data.get('access_key_2_last_rotated')),
+                        'access_key_2_last_used_date': parse_aws_datetime(user_data.get('access_key_2_last_used_date')),
+                        'access_key_2_last_used_region': user_data.get('access_key_2_last_used_region', ''),
+                        'access_key_2_last_used_service': user_data.get('access_key_2_last_used_service', ''),
+                        'cert_1_active': user_data.get('cert_1_active', 'false').lower() == 'true',
+                        'cert_1_last_rotated': parse_aws_datetime(user_data.get('cert_1_last_rotated')),
+                        'cert_2_active': user_data.get('cert_2_active', 'false').lower() == 'true',
+                        'cert_2_last_rotated': parse_aws_datetime(user_data.get('cert_2_last_rotated')),
+                    }
+                )
+            logger.info("Successfully processed credential report")
+            
+        except Exception as e:
+            logger.error(f"Error fetching credential report: {e}")
+
+    # Try to fetch credential report
+    fetch_credential_report()
 
     # Fetch resources by looping through dynamically fetched regions
     def fetch_resources_by_region(service_name, fetch_function):
@@ -341,14 +426,87 @@ def discover_log_sources(aws_account):
 
     logger.info(f"Completed discovering log sources for AWS account: {aws_account.account_id}")
 
-# this function extracts logs from a s3 bucket based on the users selected prefix
+def normalize_cloudtrail_event(raw_event, case, aws_account):
+    """Helper function to normalize CloudTrail events into a consistent format"""
+    # Handle Records array if present
+    if 'Records' in raw_event:
+        raw_event = raw_event['Records'][0]  # Take the first record
+    
+    # If this is from LookupEvents API, the actual event is in CloudTrailEvent
+    if 'CloudTrailEvent' in raw_event:
+        try:
+            raw_event = json.loads(raw_event['CloudTrailEvent'])
+        except (json.JSONDecodeError, TypeError):
+            pass
+
+    # Extract event time
+    event_time = raw_event.get('eventTime')
+    if event_time:
+        event_time = parse_aws_datetime(event_time)
+
+    # Extract user identity - just get the userName
+    user_identity = raw_event.get('userIdentity', {})
+    username = (
+        user_identity.get('userName') or
+        user_identity.get('sessionContext', {}).get('sessionIssuer', {}).get('userName') or
+        user_identity.get('invokedBy') or
+        user_identity.get('type') or
+        'Unknown'
+    )
+
+    # Get resources directly from CloudTrail event
+    resources = raw_event.get('resources', [])
+    
+    # If no resources field, try to extract from request/response
+    if not resources:
+        request_params = raw_event.get('requestParameters', {})
+        response_elements = raw_event.get('responseElements', {})
+        
+        # Store as raw data to preserve all information
+        if request_params or response_elements:
+            resources = [{
+                'requestParameters': request_params,
+                'responseElements': response_elements
+            }]
+    
+    # Validate and process the source IP address
+    source_ip = raw_event.get('sourceIPAddress')
+    if source_ip:
+        try:
+            # This will raise a ValueError if the IP is not valid
+            ipaddress.ip_address(source_ip)
+        except ValueError:
+            logger.debug(f"Invalid source IP: {source_ip}")
+            source_ip = None  # Or handle it as needed
+    
+    # Build normalized log data
+    normalized_data = {
+        'case': case,
+        'aws_account': aws_account,
+        'file_name': raw_event.get('s3', {}).get('object', {}).get('key'),
+        'event_id': raw_event.get('eventID'),
+        'event_time': event_time,
+        'event_source': raw_event.get('eventSource'),
+        'event_name': raw_event.get('eventName'),
+        'event_type': raw_event.get('eventType'),
+        'user_identity': username,
+        'region': raw_event.get('awsRegion'),
+        'ip_address': source_ip,  # Now validated
+        'user_agent': raw_event.get('userAgent'),
+        'resources': json.dumps(resources),
+        'raw_data': json.dumps(raw_event)
+    }
+
+    return normalized_data
+
 def fetch_and_normalize_cloudtrail_logs(account_id, resource_id, prefix, start_date, end_date, case_id):
+    """Fetch and normalize CloudTrail logs from S3"""
     try:
         aws_account = AWSAccount.objects.get(account_id=account_id)
         case = Case.objects.get(id=case_id)
         resource = AWSResource.objects.get(id=resource_id)
     except (AWSAccount.DoesNotExist, AWSResource.DoesNotExist, Case.DoesNotExist):
-        print("DEBUG: Account, Resource, or Case not found.")
+        logger.error("Account, Resource, or Case not found.")
         return
 
     session = boto3.Session(
@@ -371,73 +529,51 @@ def fetch_and_normalize_cloudtrail_logs(account_id, resource_id, prefix, start_d
             date_folder = f"{current_date.year}/{current_date.strftime('%m')}/{current_date.strftime('%d')}/"
             final_prefix = prefix + date_folder
 
-            print(f"DEBUG: Checking prefix '{final_prefix}' in bucket '{bucket_name}'")
+            logger.info(f"Checking prefix '{final_prefix}' in bucket '{bucket_name}'")
 
-            paginator = s3.get_paginator("list_objects_v2")
-            page_iterator = paginator.paginate(Bucket=bucket_name, Prefix=final_prefix)
-
-            for page in page_iterator:
-                contents = page.get("Contents", [])
-                for obj in contents:
-                    key = obj["Key"]
-                    try:
-                        resp = s3.get_object(Bucket=bucket_name, Key=key)
-                    except Exception as e:
-                        print(f"DEBUG: Error fetching object '{key}' - {e}")
-                        continue
-
-                    raw_body = resp["Body"].read()
-                    if key.endswith(".gz"):
+            try:
+                paginator = s3.get_paginator("list_objects_v2")
+                for page in paginator.paginate(Bucket=bucket_name, Prefix=final_prefix):
+                    for obj in page.get("Contents", []):
+                        key = obj["Key"]
                         try:
-                            file_data = gzip.decompress(raw_body).decode("utf-8")
-                        except OSError:
-                            print(f"DEBUG: Failed to decompress '{key}'. Skipping.")
-                            continue
-                    else:
-                        file_data = raw_body.decode("utf-8")
+                            resp = s3.get_object(Bucket=bucket_name, Key=key)
+                            raw_body = resp["Body"].read()
+                            
+                            # Decompress if gzipped
+                            if key.endswith(".gz"):
+                                file_data = gzip.decompress(raw_body).decode("utf-8")
+                            else:
+                                file_data = raw_body.decode("utf-8")
 
-                    try:
-                        records_json = json.loads(file_data)
-                        records = records_json.get("Records", [])
-                    except json.JSONDecodeError:
-                        print(f"DEBUG: JSON decode error in '{key}'. Skipping.")
-                        continue
+                            records = json.loads(file_data).get("Records", [])
+                            
+                            # Process each record
+                            for record in records:
+                                try:
+                                    normalized_data = normalize_cloudtrail_event(record, case, aws_account)
+                                    NormalizedLog.objects.create(**normalized_data)
+                                except Exception as e:
+                                    logger.error(f"Error processing record: {e}")
+                                    continue
 
-                    for record in records:
-                        try:
-                            raw_event = json.loads(json.dumps(record, default=str))
-                            event_time = raw_event.get('eventTime')
-                            if event_time:
-                                event_time = datetime.strptime(event_time, "%Y-%m-%dT%H:%M:%SZ")
-                                event_time = make_aware(event_time, timezone.utc)
-
-                            log_data = {
-                                'case': case,
-                                'log_id': raw_event.get('eventID'),
-                                'log_source': 'aws',
-                                'log_type': 'CloudTrail',
-                                'event_name': raw_event.get('eventName', 'Unknown'),
-                                'event_time': event_time,
-                                'user_identity': raw_event.get('userIdentity', {}).get('userName') or raw_event.get('userIdentity', {}).get('invokedBy', 'Unknown'),
-                                'ip_address': raw_event.get('sourceIPAddress', None),
-                                'resources': raw_event.get('resources', []),
-                                'raw_data': raw_event,
-                                'extra_data': {},
-                                'aws_account': aws_account,
-                            }
-
-                            NormalizedLog.objects.create(**log_data)
                         except Exception as e:
-                            print(f"DEBUG: Error saving log for eventID {raw_event.get('eventID')}: {e}")
+                            logger.error(f"Error processing file {key}: {e}")
                             continue
+
+            except Exception as e:
+                logger.error(f"Error processing date {current_date}: {e}")
 
             current_date += timedelta(days=1)
 
-    print("DEBUG: Finished fetching logs.")
-
 def fetch_management_event_history(account_id, case_id):
-    aws_account = AWSAccount.objects.get(account_id=account_id)
-    case = Case.objects.get(id=case_id)
+    """Fetch and normalize CloudTrail management events using LookupEvents API"""
+    try:
+        aws_account = AWSAccount.objects.get(account_id=account_id)
+        case = Case.objects.get(id=case_id)
+    except (AWSAccount.DoesNotExist, Case.DoesNotExist) as e:
+        logger.error(f"Error fetching account or case: {e}")
+        return
 
     session = boto3.Session(
         aws_access_key_id=aws_account.aws_access_key,
@@ -445,52 +581,38 @@ def fetch_management_event_history(account_id, case_id):
         region_name=aws_account.aws_region
     )
     client = session.client('cloudtrail')
-
     paginator = client.get_paginator('lookup_events')
 
-    for page in paginator.paginate():
-        for event in page.get('Events', []):
-            try:
-                # Handle event time: check if it's already a datetime object
-                event_time = event.get('EventTime')
-                if isinstance(event_time, str):
-                    event_time = datetime.strptime(event_time, "%Y-%m-%dT%H:%M:%SZ")
-                    event_time = make_aware(event_time, utc)
+    # Create a list to store normalized events before bulk create
+    normalized_events = []
+    batch_size = 1000  # Process 1000 events at a time
 
-                # Extract user identity or service name
-                user_identity_value = (
-                    event.get('Username') or
-                    event.get('userIdentity', {}).get('userName') or
-                    event.get('userIdentity', {}).get('invokedBy') or
-                    'Unknown'
-                )
+    try:
+        for page in paginator.paginate():
+            for event in page.get('Events', []):
+                try:
+                    normalized_data = normalize_cloudtrail_event(event, case, aws_account)
+                    # Create NormalizedLog instance but don't save yet
+                    normalized_log = NormalizedLog(**normalized_data)
+                    normalized_events.append(normalized_log)
 
-                # Extract IP address from CloudTrailEvent
-                cloudtrail_event = json.loads(event.get('CloudTrailEvent', '{}'))
-                ip_address = cloudtrail_event.get('sourceIPAddress', 'Unknown')
+                    # When we reach batch_size, bulk create the records
+                    if len(normalized_events) >= batch_size:
+                        with transaction.atomic():
+                            NormalizedLog.objects.bulk_create(normalized_events)
+                        normalized_events = []  # Clear the list after bulk create
+                        
+                except Exception as e:
+                    logger.error(f"Error processing event: {e}")
+                    continue
 
-                # Prepare log data
-                log_data = {
-                    'case': case,
-                    'log_id': event.get('EventId'),
-                    'log_source': 'aws',
-                    'log_type': event.get('EventSource', 'Unknown'),
-                    'event_name': event.get('EventName', 'Unknown'),
-                    'event_time': event_time,
-                    'user_identity': user_identity_value,
-                    'ip_address': ip_address,
-                    'resources': event.get('Resources', []),
-                    'raw_data': event,
-                    'extra_data': {},
-                    'aws_account': aws_account,
-                }
+        # Bulk create any remaining events
+        if normalized_events:
+            with transaction.atomic():
+                NormalizedLog.objects.bulk_create(normalized_events)
 
-                # Save log
-                NormalizedLog.objects.create(**log_data)
-
-            except Exception as e:
-                # Log the error and continue with the next event
-                print(f"DEBUG: Error saving event {event.get('EventId', 'Unknown')} - {e}")
+    except Exception as e:
+        logger.error(f"Error fetching management events: {e}")
 
 
 
